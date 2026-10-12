@@ -1,4 +1,3 @@
-/** 1-9 when filled, null when empty. */
 export type CellValue = number | null;
 
 export interface Cell {
