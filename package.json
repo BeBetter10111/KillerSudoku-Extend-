@@ -1,0 +1,5 @@
+{
+  "name": "killer-sudoku",
+  "private": true,
+  "workspaces": ["frontend", "backend", "shared"]
+}
