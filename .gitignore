@@ -1,27 +1,6 @@
-# Dependencies
-node_modules/
-
-# Build output
-dist/
-build/
-*.tsbuildinfo
-
-# Environment files (keep the example)
-.env
-.env.*
-!.env.example
-
-# Logs
-*.log
-npm-debug.log*
-pnpm-debug.log*
-
-# Editor / OS
-.vscode/*
-!.vscode/extensions.json
+backend/target/
+frontend/node_modules/
+frontend/dist/
 .idea/
-.DS_Store
-Thumbs.db
-
-# Test / coverage
-coverage/
+.vscode/
+*.log

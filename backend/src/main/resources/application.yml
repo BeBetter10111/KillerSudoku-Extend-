@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: killer-sudoku-backend
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+      - http://127.0.0.1:5173
+    allowed-methods: GET,POST,OPTIONS
+  websocket:
+    endpoint: /ws
+    app-destination-prefix: /app
+    broker-prefix: /topic,/queue
+    user-destination-prefix: /user
+    heartbeat-ms: 10000
