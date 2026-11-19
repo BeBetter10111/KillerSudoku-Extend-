@@ -32,6 +32,21 @@ everyone the same puzzle. A win is replayed on a fresh seeded session by `Server
 
 ## Run it
 
+### Docker (recommended)
+
+Requirements: Docker with the Compose plugin.
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:3000. The `frontend` container (nginx) serves the built UI and proxies `/api` and `/ws-game`
+to the `backend` container; it starts only after the backend health check passes. The backend API is also published
+on http://localhost:8080. Override the ports with `FRONTEND_PORT` / `BACKEND_PORT`
+(for example `FRONTEND_PORT=8088 docker compose up --build`). Stop with `docker compose down`.
+
+### Local development
+
 Requirements: JDK 17+, Maven 3.6.3+, Node 18+.
 
 ```bash
@@ -64,6 +79,14 @@ cd backend  && mvn test            # domain, algorithms, modifiers, session, rep
 cd frontend && npm test            # store, socket client (mock STOMP server), components, dashboard, app
 cd frontend && npm run build       # tsc --noEmit + vite build
 ```
+
+## Dashboard and Benchmark Lab
+
+The home screen has two tabs. **Play Game** picks the mode, difficulty, solver engine (`OPTIMIZED_MRV_PRUNING` or
+`NAIVE_ORACLE`), the Daily Seed toggle and shows the leaderboard. **Algorithm Benchmark Lab** runs
+`POST /api/benchmark/run` for 100 / 500 / 1000 puzzles of a chosen difficulty and shows both solvers side by side
+(p50 / p95 latency, average nodes, pruned branches, peak allocated RAM, node reduction, speedups and the oracle
+correctness check) with comparison bars.
 
 ## Algorithm evidence
 
