@@ -75,6 +75,10 @@ during the operation. `NAIVE_ORACLE` is plain row-major backtracking and never p
 uniqueness result against it (bounded at 1 000 000 nodes - if the budget runs out `oracleVerified` is `false`, never
 a wrong answer). `CAGE_RESHAPED` carries `{ cages, metrics }`.
 
+In the game screen the `AlgorithmEvidencePanel` sidebar shows the latest metrics (strategy, operation, time, nodes,
+pruned branches, Union-Find ops, memory in KB, oracle badge) and a short run history that updates on every
+`GAME_STARTED` / `CAGE_RESHAPED` event.
+
 ## Protocol
 
 STOMP endpoint `/ws-game` (SockJS fallback), application prefix `/app`, broker `/topic`, `/queue`.
