@@ -85,8 +85,27 @@ cd frontend && npm run build       # tsc --noEmit + vite build
 The home screen has two tabs. **Play Game** picks the mode, difficulty, solver engine (`OPTIMIZED_MRV_PRUNING` or
 `NAIVE_ORACLE`), the Daily Seed toggle and shows the leaderboard. **Algorithm Benchmark Lab** runs
 `POST /api/benchmark/run` for 100 / 500 / 1000 puzzles of a chosen difficulty and shows both solvers side by side
-(p50 / p95 latency, average nodes, pruned branches, peak allocated RAM, node reduction, speedups and the oracle
-correctness check) with comparison bars.
+(p50 / p95 latency, average nodes, pruned branches, peak allocated RAM, bitmask overhead, node reduction, speedups and
+the oracle correctness check) with comparison bars. Three more tabs cover scaling and correctness:
+
+- **Clue-Density Scaling (9x9)**: 35, 20, 10 and 0 givens (`POST /api/benchmark/clue-density`).
+- **Grid-Size (N x N) Scaling**: 4x4, 9x9 and 16x16 with about 40% givens (`POST /api/benchmark/grid-size`).
+- **Edge-Case Correctness Suite**: six mandatory cases (`POST /api/benchmark/edge-cases`).
+
+Both scaling endpoints take `{ samplesPerCondition?, seedPrefix? }` (1-50, default 10). Every solve is capped at
+1 000 000 nodes; capped runs are lower bounds and are reported as "over budget". Results from every tab can be exported
+with **Download CSV / JSON Report Data** (CSV is long format: `report,condition,solver,metric,value`).
+
+## Solver internals
+
+`OptimizedBacktrackingSolver` supports 4x4, 9x9 and 16x16 grids (box size 2, 3 or 4). It tracks `rowMask`, `colMask`,
+`boxMask` and `cageMask` as integer bitmasks together with each cage's running sum and empty-cell count, so every
+candidate check is a handful of bitwise operations. Cells are chosen by minimum remaining values (ties broken by the
+cage with the fewest empty cells), with forward checking and cage-sum bound pruning from precomputed min/max-sum
+tables. `AlgorithmMetrics.bitmaskOverheadBytes` is the exact size of the per-solve bitmask and counter arrays
+(16-byte array header plus 4 bytes per element, 8-byte aligned); the shared lookup tables are reported separately
+(`OptimizedBacktrackingSolver.lookupTableBytes`: 432 B for 4x4, 20 856 B for 9x9, 4 457 520 B for 16x16).
+`NaiveBacktrackingSolver` keeps no bitmasks. Both solvers accept an optional node budget.
 
 ## Algorithm evidence
 
