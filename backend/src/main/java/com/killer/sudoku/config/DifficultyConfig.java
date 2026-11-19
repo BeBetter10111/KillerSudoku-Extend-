@@ -4,6 +4,7 @@ import com.killer.sudoku.algorithm.BacktrackingCageGenerator;
 import com.killer.sudoku.algorithm.WeightedRandomBotStrategy;
 import com.killer.sudoku.model.Difficulty;
 import com.killer.sudoku.model.GameMode;
+import com.killer.sudoku.model.SolverStrategyType;
 import com.killer.sudoku.modifier.BotModifier;
 import com.killer.sudoku.modifier.CageReshapeModifier;
 import com.killer.sudoku.modifier.GameModifier;
@@ -21,18 +22,24 @@ public final class DifficultyConfig {
     }
 
     public List<GameModifier> createModifiers(GameMode mode, Difficulty difficulty, Random rng) {
+        return createModifiers(mode, difficulty, rng, SolverStrategyType.OPTIMIZED_MRV_PRUNING);
+    }
+
+    public List<GameModifier> createModifiers(
+            GameMode mode, Difficulty difficulty, Random rng, SolverStrategyType strategy) {
         return switch (mode) {
             case CLASSIC -> List.of();
-            case BOT_CHALLENGE -> botChallengeModifiers(difficulty, rng);
+            case BOT_CHALLENGE -> botChallengeModifiers(difficulty, rng, strategy);
         };
     }
 
-    private List<GameModifier> botChallengeModifiers(Difficulty difficulty, Random rng) {
+    private List<GameModifier> botChallengeModifiers(Difficulty difficulty, Random rng, SolverStrategyType strategy) {
         GameBalanceConfig balance = GameBalanceConfig.forBotChallenge(difficulty);
         GameModifier bot = new BotModifier(balance, botStrategy, new Random(rng.nextLong()));
         return switch (difficulty) {
             case EASY, MEDIUM -> List.of(bot);
-            case HARD -> List.of(bot, new CageReshapeModifier(balance, cageGenerator, new Random(rng.nextLong())));
+            case HARD -> List.of(
+                    bot, new CageReshapeModifier(balance, cageGenerator, strategy, new Random(rng.nextLong())));
         };
     }
 }

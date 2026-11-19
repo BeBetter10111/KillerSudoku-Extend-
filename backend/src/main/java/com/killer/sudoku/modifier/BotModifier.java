@@ -2,14 +2,11 @@ package com.killer.sudoku.modifier;
 
 import com.killer.sudoku.algorithm.WeightedRandomBotStrategy;
 import com.killer.sudoku.config.GameBalanceConfig;
-import com.killer.sudoku.event.BotEventPayload;
-import com.killer.sudoku.event.GameEventType;
-import com.killer.sudoku.event.HpChangedPayload;
-import com.killer.sudoku.model.BotEntity;
 import com.killer.sudoku.model.Board;
+import com.killer.sudoku.model.BotEntity;
 import com.killer.sudoku.model.PlayerHealth;
 import com.killer.sudoku.model.Position;
-import com.killer.sudoku.service.GameSession;
+import com.killer.sudoku.core.GameSession;
 import java.util.Optional;
 import java.util.Random;
 
@@ -39,7 +36,7 @@ public final class BotModifier implements GameModifier {
         }
         Position start = strategy.selectNext(board, null, rng).orElseThrow();
         bot = new BotEntity(start, config.initialBotTimeoutMs());
-        session.publish(GameEventType.BOT_SPAWNED, BotEventPayload.hidden(config.initialBotTimeoutMs()));
+        session.notifyBotUpdated(bot);
     }
 
     @Override
@@ -60,7 +57,7 @@ public final class BotModifier implements GameModifier {
         Position next = strategy.selectNext(board, pos, rng).orElseThrow();
         bot.reveal();
         bot.relocate(next, timeoutMs);
-        session.publish(GameEventType.BOT_REVEALED, new BotEventPayload(next, timeoutMs, timeoutMs));
+        session.notifyBotUpdated(bot);
     }
 
     @Override
@@ -75,9 +72,7 @@ public final class BotModifier implements GameModifier {
         PlayerHealth health = session.getPlayerHealth();
         health.deductHp(config.hpPenalty());
         consecutiveReveals = 0;
-        session.publish(GameEventType.BOT_TIMEOUT, new BotEventPayload(bot.getPosition(), 0, bot.getMaxTimeoutMs()));
-        session.publish(GameEventType.HP_CHANGED,
-                new HpChangedPayload(health.getCurrentHp(), health.getMaxHp(), -config.hpPenalty()));
+        session.notifyHpUpdated();
         Board board = session.getBoard();
         if (health.isDead() || board.getEmptyCellsCount() < MIN_EMPTY_CELLS) {
             deactivate(session);
@@ -86,7 +81,7 @@ public final class BotModifier implements GameModifier {
         Position next = strategy.selectNext(board, bot.getPosition(), rng).orElseThrow();
         bot.hide();
         bot.relocate(next, config.initialBotTimeoutMs());
-        session.publish(GameEventType.BOT_SPAWNED, BotEventPayload.hidden(config.initialBotTimeoutMs()));
+        session.notifyBotUpdated(bot);
     }
 
     @Override
@@ -106,6 +101,6 @@ public final class BotModifier implements GameModifier {
     private void deactivate(GameSession session) {
         active = false;
         bot.deactivate();
-        session.publish(GameEventType.BOT_DEACTIVATED, BotEventPayload.hidden(config.initialBotTimeoutMs()));
+        session.notifyBotUpdated(bot);
     }
 }

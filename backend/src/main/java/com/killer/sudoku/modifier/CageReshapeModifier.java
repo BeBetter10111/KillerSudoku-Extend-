@@ -1,34 +1,40 @@
 package com.killer.sudoku.modifier;
 
 import com.killer.sudoku.algorithm.BacktrackingCageGenerator;
+import com.killer.sudoku.algorithm.CageLayoutResult;
 import com.killer.sudoku.config.GameBalanceConfig;
-import com.killer.sudoku.event.AlertPayload;
-import com.killer.sudoku.event.GameEventType;
+import com.killer.sudoku.model.AlgorithmMetrics;
 import com.killer.sudoku.model.Board;
-import com.killer.sudoku.model.Cage;
 import com.killer.sudoku.model.Position;
-import com.killer.sudoku.service.GameSession;
-import java.util.List;
+import com.killer.sudoku.model.SolverStrategyType;
+import com.killer.sudoku.core.GameSession;
+import java.util.Optional;
 import java.util.Random;
 
 public final class CageReshapeModifier implements GameModifier {
 
-    private static final String ALERT_MESSAGE = "Cages are about to reshape";
-
     private final long intervalMs;
     private final long alertMs;
     private final BacktrackingCageGenerator generator;
+    private final SolverStrategyType strategy;
     private final Random rng;
     private long timeUntilReshapeMs;
     private boolean alertSent;
+    private AlgorithmMetrics lastMetrics;
 
     public CageReshapeModifier(GameBalanceConfig config, BacktrackingCageGenerator generator, Random rng) {
+        this(config, generator, SolverStrategyType.OPTIMIZED_MRV_PRUNING, rng);
+    }
+
+    public CageReshapeModifier(
+            GameBalanceConfig config, BacktrackingCageGenerator generator, SolverStrategyType strategy, Random rng) {
         if (!config.hasReshape()) {
             throw new IllegalArgumentException("Balance config does not define a reshape interval");
         }
         this.intervalMs = config.reshapeIntervalMs();
         this.alertMs = config.preReshapeAlertMs();
         this.generator = generator;
+        this.strategy = strategy;
         this.rng = rng;
         this.timeUntilReshapeMs = intervalMs;
     }
@@ -48,8 +54,7 @@ public final class CageReshapeModifier implements GameModifier {
         timeUntilReshapeMs -= deltaMs;
         if (timeUntilReshapeMs <= alertMs && !alertSent) {
             alertSent = true;
-            session.publish(GameEventType.ALERT_WARNING,
-                    new AlertPayload(ALERT_MESSAGE, Math.max(0, timeUntilReshapeMs)));
+            session.notifyAlertWarning(timeUntilReshapeMs);
         }
         if (timeUntilReshapeMs <= 0) {
             reshape(session);
@@ -65,15 +70,20 @@ public final class CageReshapeModifier implements GameModifier {
         return timeUntilReshapeMs;
     }
 
+    public Optional<AlgorithmMetrics> getLastMetrics() {
+        return Optional.ofNullable(lastMetrics);
+    }
+
     private void reshape(GameSession session) {
         Board board = session.getBoard();
-        List<Cage> reshaped = generator.reshapeCages(board, rng);
+        CageLayoutResult result = generator.reshapeCages(board, strategy, rng);
+        lastMetrics = result.metrics();
         timeUntilReshapeMs = intervalMs;
         alertSent = false;
-        if (reshaped.equals(board.getCages())) {
+        if (result.cages().equals(board.getCages())) {
             return;
         }
-        board.replaceCages(reshaped);
-        session.publish(GameEventType.CAGE_RESHAPED, reshaped);
+        board.replaceCages(result.cages());
+        session.notifyCagesReshaped(result.cages(), result.metrics());
     }
 }

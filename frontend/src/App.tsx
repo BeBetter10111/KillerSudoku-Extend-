@@ -4,10 +4,10 @@ import { Dashboard, type GameSetup } from './components/dashboard/Dashboard';
 import { SudokuBoard } from './components/board/SudokuBoard';
 import { ResultModal } from './components/game/ResultModal';
 import { AlertBanner } from './components/status/AlertBanner';
+import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePanel';
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
 import { connectAndStartGame, leaveGame } from './services/socketClient';
-import { DEFAULT_SOLVER_STRATEGY } from './types/game';
 import { useGameStore } from './store/useGameStore';
 import { formatClock } from './utils/formatTime';
 
@@ -77,7 +77,7 @@ export default function App() {
       await connectAndStartGame(
         setup.mode,
         setup.difficulty,
-        DEFAULT_SOLVER_STRATEGY,
+        setup.solverStrategy,
         setup.seed,
         setup.playerName,
       );
@@ -136,7 +136,7 @@ export default function App() {
 
   return (
     <main className="min-h-screen bg-slate-900 text-slate-100">
-      <div className="mx-auto flex max-w-3xl flex-col items-center gap-3 p-3 sm:p-6">
+      <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 p-3 sm:p-6">
         <ArenaHeader onQuit={quit} />
         {storeError !== null && gameStatus === 'PLAYING' && (
           <div
@@ -154,11 +154,18 @@ export default function App() {
           </div>
         )}
         <AlertBanner />
-        <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
-          <HealthBar />
-          <BotTimer />
+        <div className="flex w-full flex-col items-center gap-3 lg:flex-row lg:items-start lg:justify-center">
+          <div className="flex w-full max-w-3xl flex-col items-center gap-3">
+            <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
+              <HealthBar />
+              <BotTimer />
+            </div>
+            <SudokuBoard />
+          </div>
+          <aside className="w-full max-w-3xl lg:w-80 lg:shrink-0">
+            <AlgorithmEvidencePanel />
+          </aside>
         </div>
-        <SudokuBoard />
       </div>
       {(gameStatus === 'WON' || gameStatus === 'LOST') && (
         <ConnectedResultModal onPlayAgain={playAgain} onBackToDashboard={() => void backToDashboard()} />
@@ -171,6 +178,7 @@ function ArenaHeader({ onQuit }: { onQuit: () => void }) {
   const mode = useGameStore((state) => state.mode);
   const difficulty = useGameStore((state) => state.difficulty);
   const seed = useGameStore((state) => state.seed);
+  const solverStrategy = useGameStore((state) => state.solverStrategy);
   const gameStatus = useGameStore((state) => state.gameStatus);
   const isDaily = seed !== null && seed.startsWith('daily-');
 
@@ -180,6 +188,11 @@ function ArenaHeader({ onQuit }: { onQuit: () => void }) {
         <span className="rounded-md bg-slate-700 px-2 py-1">{mode === 'BOT_CHALLENGE' ? 'Bot Challenge' : 'Classic'}</span>
         <span className="rounded-md bg-slate-700 px-2 py-1">{difficulty}</span>
         {isDaily && <span className="rounded-md bg-amber-400/20 px-2 py-1 text-amber-200">Daily</span>}
+        {solverStrategy !== null && (
+          <span data-testid="engine-chip" className="rounded-md bg-emerald-500/15 px-2 py-1 text-emerald-200">
+            {solverStrategy === 'NAIVE_ORACLE' ? 'Naive Oracle' : 'Optimized'}
+          </span>
+        )}
       </div>
       <GameClock />
       {gameStatus === 'PLAYING' ? (

@@ -48,6 +48,8 @@ export interface BoardStateDTO {
 
 export type SolverStrategyType = 'NAIVE_ORACLE' | 'OPTIMIZED_MRV_PRUNING';
 
+export const DEFAULT_SOLVER_STRATEGY: SolverStrategyType = 'OPTIMIZED_MRV_PRUNING';
+
 export type AlgorithmOperationType = 'PUZZLE_GEN' | 'CAGE_RESHAPE' | 'SOLVE';
 
 export interface AlgorithmMetrics {

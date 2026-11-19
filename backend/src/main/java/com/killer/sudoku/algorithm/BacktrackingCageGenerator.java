@@ -1,10 +1,12 @@
 package com.killer.sudoku.algorithm;
 
+import com.killer.sudoku.model.AlgorithmMetrics;
 import com.killer.sudoku.model.Board;
 import com.killer.sudoku.model.Cage;
 import com.killer.sudoku.model.Cell;
 import com.killer.sudoku.model.Difficulty;
 import com.killer.sudoku.model.Position;
+import com.killer.sudoku.model.SolverStrategyType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -25,25 +27,45 @@ public final class BacktrackingCageGenerator {
 
     private static final int[][] DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
-    private final SudokuSolver solver;
+    private static final SolverStrategyType DEFAULT_STRATEGY = SolverStrategyType.OPTIMIZED_MRV_PRUNING;
 
-    public BacktrackingCageGenerator(SudokuSolver solver) {
-        this.solver = solver;
+    private enum OracleVerdict {
+        AGREES,
+        DISAGREES,
+        INCONCLUSIVE
     }
 
     public List<Cage> generateCages(int[][] solvedGrid, Difficulty difficulty, Random rng) {
+        return generateCagesWithMetrics(solvedGrid, difficulty, DEFAULT_STRATEGY, rng).cages();
+    }
+
+    public CageLayoutResult generateCagesWithMetrics(
+            int[][] solvedGrid, Difficulty difficulty, SolverStrategyType strategy, Random rng) {
         int[] digits = flattenDigits(solvedGrid);
         int[] weights = sizeWeights(difficulty);
+        ResourceMeter.Reading reading = ResourceMeter.start();
+        long unionFindOps = 0;
         for (int attempt = 0; attempt < MAX_PARTITION_ATTEMPTS; attempt++) {
             Partition partition = new Partition(digits, weights, rng);
-            if (partition.run()) {
-                return partition.toCages();
+            boolean success = partition.run();
+            if (success) {
+                List<Cage> cages = partition.toCages();
+                unionFindOps += partition.unionFind.operationCount();
+                ResourceMeter.Measurement measurement = ResourceMeter.stop(reading);
+                AlgorithmMetrics metrics = new AlgorithmMetrics(strategy, AlgorithmMetrics.PUZZLE_GEN,
+                        measurement.millis(), 0, 0, unionFindOps, measurement.bytes(), false);
+                return new CageLayoutResult(cages, metrics);
             }
+            unionFindOps += partition.unionFind.operationCount();
         }
         throw new IllegalStateException("Unable to partition the grid into valid cages");
     }
 
     public List<Cage> reshapeCages(Board currentBoard, Random rng) {
+        return reshapeCages(currentBoard, DEFAULT_STRATEGY, rng).cages();
+    }
+
+    public CageLayoutResult reshapeCages(Board currentBoard, SolverStrategyType strategy, Random rng) {
         int[][] solution = new int[SIZE][SIZE];
         int[][] known = new int[SIZE][SIZE];
         for (int row = 0; row < SIZE; row++) {
@@ -53,13 +75,40 @@ public final class BacktrackingCageGenerator {
                 known[row][col] = cell.isSolved() ? cell.getSolutionValue() : Cell.EMPTY;
             }
         }
+        SudokuSolver solver = SolverFactory.forStrategy(strategy);
+        AlgorithmMetrics total = AlgorithmMetrics.empty(strategy, AlgorithmMetrics.CAGE_RESHAPE);
+        double millis = 0;
+        long bytes = 0;
         for (int attempt = 0; attempt < MAX_RESHAPE_ATTEMPTS; attempt++) {
-            List<Cage> candidate = generateCages(solution, RESHAPE_DIFFICULTY, rng);
-            if (solver.hasUniqueSolution(known, candidate)) {
-                return candidate;
+            ResourceMeter.Reading reading = ResourceMeter.start();
+            CageLayoutResult layout = generateCagesWithMetrics(solution, RESHAPE_DIFFICULTY, strategy, rng);
+            SudokuSolver.CountResult uniqueness = solver.countSolutions(known, layout.cages(), 2);
+            ResourceMeter.Measurement measurement = ResourceMeter.stop(reading);
+            total = total.plus(layout.metrics()).plus(uniqueness.metrics());
+            millis += measurement.millis();
+            bytes += measurement.bytes();
+            if (!uniqueness.unique()) {
+                continue;
             }
+            OracleVerdict verdict = verifyWithOracle(strategy, known, layout.cages());
+            if (verdict == OracleVerdict.DISAGREES) {
+                continue;
+            }
+            return new CageLayoutResult(layout.cages(),
+                    total.withTiming(millis, bytes).withOracleVerified(verdict == OracleVerdict.AGREES));
         }
-        return currentBoard.getCages();
+        return new CageLayoutResult(currentBoard.getCages(), total.withTiming(millis, bytes));
+    }
+
+    private static OracleVerdict verifyWithOracle(SolverStrategyType strategy, int[][] known, List<Cage> cages) {
+        if (strategy == SolverStrategyType.NAIVE_ORACLE) {
+            return OracleVerdict.AGREES;
+        }
+        SudokuSolver.CountResult result = SolverFactory.boundedOracle().countSolutions(known, cages, 2);
+        if (!result.completed()) {
+            return OracleVerdict.INCONCLUSIVE;
+        }
+        return result.solutionsFound() == 1 ? OracleVerdict.AGREES : OracleVerdict.DISAGREES;
     }
 
     private static int[] sizeWeights(Difficulty difficulty) {

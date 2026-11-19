@@ -1,6 +1,6 @@
 package com.killer.sudoku.core;
 
-import java.com.killer.sudoku.algorithm.GeneratedPuzzle;
+import com.killer.sudoku.algorithm.GeneratedPuzzle;
 import com.killer.sudoku.algorithm.PuzzleGenerator;
 import com.killer.sudoku.config.DifficultyConfig;
 import com.killer.sudoku.config.GameBalanceConfig;

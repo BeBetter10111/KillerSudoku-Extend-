@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.killer.sudoku.model.AlgorithmMetrics;
 import com.killer.sudoku.model.Board;
 import com.killer.sudoku.model.Cell;
 import com.killer.sudoku.model.Difficulty;
+import com.killer.sudoku.model.SolverStrategyType;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -16,9 +18,9 @@ import org.junit.jupiter.api.Test;
 
 class PuzzleGeneratorTest {
 
-    private final SudokuSolver solver = new SudokuSolver();
+    private final SudokuSolver solver = SolverFactory.forStrategy(SolverStrategyType.OPTIMIZED_MRV_PRUNING);
     private final PuzzleGenerator generator =
-            new PuzzleGenerator(solver, new BacktrackingCageGenerator(solver));
+            new PuzzleGenerator(new BacktrackingCageGenerator());
 
     @Test
     void generatesValidUniquelySolvablePuzzlesForEveryDifficulty() {
@@ -30,9 +32,9 @@ class PuzzleGeneratorTest {
                 BacktrackingCageGeneratorTest.assertValidPartition(solution, board.getCages());
                 int[][] givens = givensOf(board);
                 assertTrue(solver.hasUniqueSolution(givens, board.getCages()));
-                int[][] solved = givensOf(board);
-                assertTrue(solver.solve(solved, board.getCages()));
-                assertTrue(java.util.Arrays.deepEquals(solution, solved));
+                SudokuSolver.SolveResult result = solver.solve(givensOf(board), board.getCages());
+                assertTrue(result.solved());
+                assertTrue(java.util.Arrays.deepEquals(solution, result.solution()));
             }
         }
     }
@@ -115,5 +117,53 @@ class PuzzleGeneratorTest {
             assertEquals(9, col.size());
             assertEquals(9, box.size());
         }
+    }
+
+    @Test
+    void attachesVerifiedMetricsForOptimizedStrategy() {
+        GeneratedPuzzle result =
+                generator.generateWithMetrics(Difficulty.MEDIUM, "metrics-opt", SolverStrategyType.OPTIMIZED_MRV_PRUNING);
+        AlgorithmMetrics metrics = result.metrics();
+        assertEquals(SolverStrategyType.OPTIMIZED_MRV_PRUNING, metrics.strategyUsed());
+        assertEquals(AlgorithmMetrics.PUZZLE_GEN, metrics.operationType());
+        assertTrue(metrics.oracleVerified());
+        assertTrue(metrics.unionFindOps() > 0);
+        assertTrue(metrics.nodesVisited() > 0);
+        assertTrue(metrics.prunedBranches() > 0);
+        assertTrue(metrics.executionTimeMs() > 0);
+        assertTrue(metrics.memoryBytes() >= 0);
+        assertTrue(solver.hasUniqueSolution(givensOf(result.board()), result.board().getCages()));
+    }
+
+    @Test
+    void naiveStrategyGeneratesValidUniquePuzzlesToo() {
+        for (Difficulty difficulty : Difficulty.values()) {
+            GeneratedPuzzle result = generator.generateWithMetrics(difficulty, "metrics-naive-" + difficulty,
+                    SolverStrategyType.NAIVE_ORACLE);
+            Board board = result.board();
+            assertValidSudoku(solutionOf(board));
+            BacktrackingCageGeneratorTest.assertValidPartition(solutionOf(board), board.getCages());
+            assertTrue(solver.hasUniqueSolution(givensOf(board), board.getCages()));
+            assertEquals(SolverStrategyType.NAIVE_ORACLE, result.metrics().strategyUsed());
+            assertTrue(result.metrics().oracleVerified());
+        }
+    }
+
+    @Test
+    void metricsAreDeterministicApartFromTimeAndMemory() {
+        AlgorithmMetrics a = generator.generateWithMetrics(Difficulty.HARD, "det", SolverStrategyType.OPTIMIZED_MRV_PRUNING).metrics();
+        AlgorithmMetrics b = generator.generateWithMetrics(Difficulty.HARD, "det", SolverStrategyType.OPTIMIZED_MRV_PRUNING).metrics();
+        assertEquals(a.nodesVisited(), b.nodesVisited());
+        assertEquals(a.prunedBranches(), b.prunedBranches());
+        assertEquals(a.unionFindOps(), b.unionFindOps());
+    }
+
+    @Test
+    void backwardCompatibleOverloadsMatchMetricVariant() {
+        Board plain = generator.generate(Difficulty.MEDIUM, "compat");
+        Board withMetrics = generator
+                .generateWithMetrics(Difficulty.MEDIUM, "compat", SolverStrategyType.OPTIMIZED_MRV_PRUNING).board();
+        assertEquals(plain.getCages(), withMetrics.getCages());
+        assertTrue(java.util.Arrays.deepEquals(givensOf(plain), givensOf(withMetrics)));
     }
 }

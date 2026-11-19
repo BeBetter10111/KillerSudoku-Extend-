@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCount, formatKilobytes, formatMillis } from './formatMetrics';
+import { formatCount, formatKilobytes, formatMemory, formatMillis, formatPercent, formatSpeedup } from './formatMetrics';
 
 describe('formatMetrics', () => {
   it('formats milliseconds with sensible precision', () => {
@@ -25,5 +25,21 @@ describe('formatMetrics', () => {
     expect(formatMillis(-5)).toBe('0.00 ms');
     expect(formatKilobytes(Number.NaN)).toBe('0.0 KB');
     expect(formatCount(Number.POSITIVE_INFINITY)).toBe('0');
+  });
+});
+
+describe('benchmark formatters', () => {
+  it('switches memory to megabytes above one MiB', () => {
+    expect(formatMemory(3 * 1024)).toBe('3.0 KB');
+    expect(formatMemory(1024 * 1024)).toBe('1.0 MB');
+    expect(formatMemory(529_804 * 1024)).toBe('517.4 MB');
+  });
+
+  it('formats percentages and speedups', () => {
+    expect(formatPercent(99.6)).toBe('99.6%');
+    expect(formatPercent(100, 0)).toBe('100%');
+    expect(formatSpeedup(3.5, 0.24)).toBe('15x');
+    expect(formatSpeedup(1.2, 0.8)).toBe('1.5x');
+    expect(formatSpeedup(5, 0)).toBe('n/a');
   });
 });
