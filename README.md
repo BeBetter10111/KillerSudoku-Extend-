@@ -52,8 +52,8 @@ Configuration:
 | Setting | Where | Default |
 |---|---|---|
 | Allowed CORS origins / methods | `backend/src/main/resources/application.yml` (`app.cors.*`) | `http://localhost:5173`, `GET,POST,OPTIONS` |
-| WebSocket URL | `VITE_WS_URL` | `ws://localhost:8080/ws-game/websocket` |
-| REST base URL | `VITE_API_URL` | `http://localhost:8080` |
+| WebSocket URL | `VITE_WS_URL` | derived from the page: `ws(s)://<page host>/ws-game/websocket` (Vite proxies `/ws-game` to `localhost:8080`) |
+| REST base URL | `VITE_API_URL` | empty = same origin (Vite proxies `/api` to `localhost:8080`) |
 
 (`/ws-game/websocket` is the raw WebSocket transport of the SockJS-enabled `/ws-game` endpoint.)
 
