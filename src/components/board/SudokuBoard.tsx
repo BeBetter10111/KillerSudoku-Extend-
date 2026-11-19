@@ -1,0 +1,209 @@
+import { Eraser, Pencil } from 'lucide-react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { submitCell } from '../../services/socketClient';
+import { useGameStore } from '../../store/useGameStore';
+import { CageOverlay } from './CageOverlay';
+import { Cell, type CellHighlight } from './Cell';
+
+const GRID_SIZE = 9;
+const BOX_SIZE = 3;
+const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+const ARROW_STEPS: Record<string, readonly [number, number]> = {
+  ArrowUp: [-1, 0],
+  ArrowDown: [1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+};
+
+function enterDigit(value: number): void {
+  const { selectedCell, grid, gameStatus, notesMode, toggleNoteNumber } = useGameStore.getState();
+  if (gameStatus !== 'PLAYING' || selectedCell === null) {
+    return;
+  }
+  const cell = grid[selectedCell.row]?.[selectedCell.col];
+  if (!cell || cell.given || cell.currentValue !== 0) {
+    return;
+  }
+  if (notesMode) {
+    toggleNoteNumber(value);
+  } else {
+    submitCell(selectedCell.row, selectedCell.col, value);
+  }
+}
+
+function moveSelection(deltaRow: number, deltaCol: number): void {
+  const { selectedCell, selectCell } = useGameStore.getState();
+  if (selectedCell === null) {
+    selectCell({ row: 0, col: 0 });
+    return;
+  }
+  selectCell({
+    row: Math.min(GRID_SIZE - 1, Math.max(0, selectedCell.row + deltaRow)),
+    col: Math.min(GRID_SIZE - 1, Math.max(0, selectedCell.col + deltaCol)),
+  });
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
+function handleKeyDown(event: KeyboardEvent): void {
+  if (event.ctrlKey || event.metaKey || event.altKey || isEditableTarget(event.target)) {
+    return;
+  }
+  const store = useGameStore.getState();
+  if (store.grid.length === 0) {
+    return;
+  }
+  const step = ARROW_STEPS[event.key];
+  if (step) {
+    moveSelection(step[0], step[1]);
+  } else if (/^[1-9]$/.test(event.key)) {
+    enterDigit(Number(event.key));
+  } else if (event.key === 'Backspace' || event.key === 'Delete') {
+    store.clearNotes();
+  } else if (event.key === 'n' || event.key === 'N') {
+    store.toggleNotesMode();
+  } else {
+    return;
+  }
+  event.preventDefault();
+}
+
+function highlightFor(row: number, col: number, value: number, selected: { row: number; col: number } | null, selectedValue: number): CellHighlight {
+  if (selected === null) {
+    return 'none';
+  }
+  if (selected.row === row && selected.col === col) {
+    return 'selected';
+  }
+  if (selectedValue !== 0 && value === selectedValue) {
+    return 'same';
+  }
+  const sameBox =
+    Math.floor(row / BOX_SIZE) === Math.floor(selected.row / BOX_SIZE) &&
+    Math.floor(col / BOX_SIZE) === Math.floor(selected.col / BOX_SIZE);
+  return selected.row === row || selected.col === col || sameBox ? 'peer' : 'none';
+}
+
+function Numpad() {
+  const grid = useGameStore((state) => state.grid);
+  const notesMode = useGameStore((state) => state.notesMode);
+  const toggleNotesMode = useGameStore((state) => state.toggleNotesMode);
+  const clearNotes = useGameStore((state) => state.clearNotes);
+
+  const placedCounts = useMemo(() => {
+    const counts = new Array<number>(GRID_SIZE + 1).fill(0);
+    for (const line of grid) {
+      for (const cell of line) {
+        counts[cell.currentValue] += 1;
+      }
+    }
+    return counts;
+  }, [grid]);
+
+  return (
+    <div className="flex flex-col gap-2" data-testid="numpad">
+      <div className="grid grid-cols-9 gap-1 sm:gap-1.5">
+        {DIGITS.map((digit) => (
+          <button
+            key={digit}
+            type="button"
+            disabled={placedCounts[digit] >= GRID_SIZE}
+            onClick={() => enterDigit(digit)}
+            className={`aspect-[3/4] rounded-lg text-lg font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-30 sm:text-2xl ${
+              notesMode
+                ? 'bg-slate-700 text-amber-200 hover:bg-slate-600'
+                : 'bg-sky-700 text-white hover:bg-sky-600 active:bg-sky-500'
+            }`}
+          >
+            {digit}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          aria-pressed={notesMode}
+          onClick={toggleNotesMode}
+          className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+            notesMode ? 'bg-amber-500 text-slate-900' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+          }`}
+        >
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+          Notes {notesMode ? 'ON' : 'OFF'}
+        </button>
+        <button
+          type="button"
+          onClick={clearNotes}
+          className="flex items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-600"
+        >
+          <Eraser className="h-4 w-4" aria-hidden="true" />
+          Erase notes
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function SudokuBoard({ className = '' }: { className?: string }) {
+  const grid = useGameStore((state) => state.grid);
+  const selectedCell = useGameStore((state) => state.selectedCell);
+  const notes = useGameStore((state) => state.notes);
+  const lastErrorCell = useGameStore((state) => state.lastErrorCell);
+  const botPosition = useGameStore((state) => state.botPosition);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleSelect = useCallback((row: number, col: number) => {
+    useGameStore.getState().selectCell({ row, col });
+  }, []);
+
+  if (grid.length === 0) {
+    return null;
+  }
+
+  const selectedValue = selectedCell ? grid[selectedCell.row][selectedCell.col].currentValue : 0;
+
+  return (
+    <div className={`flex w-full max-w-[560px] flex-col gap-4 ${className}`}>
+      <div
+        role="group"
+        aria-label="Killer Sudoku board"
+        className="relative aspect-square w-full touch-manipulation overflow-hidden rounded-xl border-2 border-slate-300 bg-slate-800 shadow-xl"
+      >
+        <div className="grid h-full w-full grid-cols-9 grid-rows-9">
+          {grid.map((line) =>
+            line.map((cell) => {
+              const isErrorCell =
+                lastErrorCell !== null && lastErrorCell.row === cell.row && lastErrorCell.col === cell.col;
+              return (
+                <Cell
+                  key={`${cell.row}-${cell.col}`}
+                  row={cell.row}
+                  col={cell.col}
+                  value={cell.currentValue}
+                  given={cell.given}
+                  notes={notes[`${cell.row},${cell.col}`]}
+                  highlight={highlightFor(cell.row, cell.col, cell.currentValue, selectedCell, selectedValue)}
+                  highlightValue={selectedValue}
+                  errorSignal={isErrorCell ? lastErrorCell : null}
+                  isBot={botPosition !== null && botPosition.row === cell.row && botPosition.col === cell.col}
+                  onSelect={handleSelect}
+                />
+              );
+            }),
+          )}
+        </div>
+        <CageOverlay />
+      </div>
+      <Numpad />
+    </div>
+  );
+}
