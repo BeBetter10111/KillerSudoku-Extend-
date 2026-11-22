@@ -6,6 +6,7 @@ import { algorithmMetrics, emit, revealedBot, startGame } from '../../test/fixtu
 import { AlertBanner } from './AlertBanner';
 import { BotTimer } from './BotTimer';
 import { HealthBar } from './HealthBar';
+import { ReshapeTimer } from './ReshapeTimer';
 
 beforeEach(() => {
   useGameStore.getState().resetGame();
@@ -122,5 +123,85 @@ describe('BotTimer', () => {
 
     emit({ type: 'BOT_UPDATED', payload: { active: true, revealed: false, position: null, remainingTimeoutMs: 30000, maxTimeoutMs: 30000 } });
     expect(screen.queryByTestId('bot-timer')).toBeNull();
+  });
+});
+
+describe('HealthBar lives (classic mode)', () => {
+  const classic = () => startGame({ mode: 'CLASSIC', playerHealth: { maxHp: 3, currentHp: 3 }, bot: null });
+
+  it('shows three hearts and removes one per lost life', () => {
+    classic();
+    render(<HealthBar />);
+    const root = screen.getByTestId('health-bar');
+    expect(root.getAttribute('data-variant')).toBe('lives');
+    expect(screen.getByText('Lives')).toBeTruthy();
+    expect(screen.getByText('3 / 3')).toBeTruthy();
+    expect(screen.getAllByTestId('life-full')).toHaveLength(3);
+    expect(screen.queryAllByTestId('life-lost')).toHaveLength(0);
+    expect(screen.getByRole('progressbar', { name: 'Lives remaining' }).getAttribute('aria-valuenow')).toBe('3');
+
+    emit({ type: 'HP_CHANGED', payload: { maxHp: 3, currentHp: 2 } });
+    expect(screen.getAllByTestId('life-full')).toHaveLength(2);
+    expect(screen.getAllByTestId('life-lost')).toHaveLength(1);
+    expect(screen.getByText('2 / 3')).toBeTruthy();
+
+    emit({ type: 'HP_CHANGED', payload: { maxHp: 3, currentHp: 0 } });
+    expect(screen.queryAllByTestId('life-full')).toHaveLength(0);
+    expect(screen.getAllByTestId('life-lost')).toHaveLength(3);
+  });
+
+  it('flashes and shakes when a life is lost, and keeps the HP bar for bot mode', () => {
+    vi.useFakeTimers();
+    classic();
+    render(<HealthBar />);
+    expect(screen.getByTestId('health-bar').className).not.toContain('animate-shake');
+    emit({ type: 'HP_CHANGED', payload: { maxHp: 3, currentHp: 2 } });
+    expect(screen.getByTestId('health-bar').className).toContain('animate-shake');
+    expect(screen.getByTestId('health-flash')).toBeTruthy();
+    cleanup();
+
+    useGameStore.getState().resetGame();
+    startGame();
+    render(<HealthBar />);
+    expect(screen.getByTestId('health-bar').getAttribute('data-variant')).toBe('hp');
+    expect(screen.queryByTestId('life-full')).toBeNull();
+  });
+});
+
+describe('ReshapeTimer', () => {
+  const tick = (reshapeRemainingMs: number | null) =>
+    emit({ type: 'TICK', payload: { elapsedMs: 1000, botRemainingMs: null, reshapeRemainingMs } });
+
+  it('is hidden until the server reports a countdown', () => {
+    startGame();
+    const { container } = render(<ReshapeTimer />);
+    expect(container.innerHTML).toBe('');
+    tick(null);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('counts down in minutes and seconds and turns amber then red', () => {
+    startGame();
+    render(<ReshapeTimer />);
+    tick(272_000);
+    expect(screen.getByTestId('reshape-timer-value').textContent).toBe('4:32');
+    expect(screen.getByTestId('reshape-timer').className).not.toContain('amber');
+
+    tick(25_000);
+    expect(screen.getByTestId('reshape-timer-value').textContent).toBe('0:25');
+    expect(screen.getByTestId('reshape-timer').className).toContain('amber');
+
+    tick(8_000);
+    expect(screen.getByTestId('reshape-timer').className).toContain('rose');
+    expect(screen.getByTestId('reshape-timer').className).toContain('animate-pulse');
+  });
+
+  it('disappears when the game is over', () => {
+    startGame();
+    render(<ReshapeTimer />);
+    tick(120_000);
+    expect(screen.getByTestId('reshape-timer')).toBeTruthy();
+    emit({ type: 'GAME_LOST', payload: { won: false, finalTimeMs: 5000, reason: 'HP_DEPLETED' } });
+    expect(screen.queryByTestId('reshape-timer')).toBeNull();
   });
 });

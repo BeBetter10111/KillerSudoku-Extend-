@@ -61,6 +61,7 @@ export interface AlgorithmMetrics {
   unionFindOps: number;
   memoryBytes: number;
   oracleVerified: boolean;
+  bitmaskOverheadBytes: number;
 }
 
 export interface StrategyBenchmarkStats {
@@ -70,6 +71,7 @@ export interface StrategyBenchmarkStats {
   avgNodesVisited: number;
   avgPrunedBranches: number;
   peakMemoryBytes: number;
+  bitmaskOverheadBytes: number;
 }
 
 export interface BenchmarkRequest {
@@ -88,6 +90,66 @@ export interface BenchmarkResultDTO {
   optimized: StrategyBenchmarkStats;
   nodeReductionPercent: number;
   oracleAgreementPercent: number;
+  generatedAt: number;
+}
+
+export type ScalingKind = 'CLUE_DENSITY' | 'GRID_SIZE';
+
+export interface ScalingRequest {
+  samplesPerCondition?: number;
+  seedPrefix?: string;
+}
+
+export interface ScalingStatsDTO {
+  p50LatencyMs: number;
+  p95LatencyMs: number;
+  avgNodesVisited: number;
+  avgPrunedBranches: number;
+  peakMemoryBytes: number;
+  bitmaskOverheadBytes: number;
+  lookupTableBytes: number;
+}
+
+export interface ScalingPointDTO {
+  label: string;
+  boxSize: number;
+  gridSize: number;
+  cellCount: number;
+  givens: number;
+  samples: number;
+  naiveBudgetExceeded: number;
+  optimizedBudgetExceeded: number;
+  solutionsChecked: number;
+  correctnessPercent: number;
+  nodeReductionPercent: number;
+  naive: ScalingStatsDTO;
+  optimized: ScalingStatsDTO;
+}
+
+export interface ScalingBenchmarkResultDTO {
+  kind: ScalingKind;
+  samplesPerCondition: number;
+  seedPrefix: string;
+  nodeBudgetPerSolve: number;
+  points: ScalingPointDTO[];
+  generatedAt: number;
+}
+
+export interface EdgeCaseResultDTO {
+  id: number;
+  name: string;
+  description: string;
+  passed: boolean;
+  executionTimeMs: number;
+  nodesVisited: number;
+  detail: string;
+}
+
+export interface EdgeCaseReportDTO {
+  total: number;
+  passed: number;
+  allPassed: boolean;
+  results: EdgeCaseResultDTO[];
   generatedAt: number;
 }
 
@@ -117,6 +179,7 @@ export interface AlertPayload {
 export interface TickPayload {
   elapsedMs: number;
   botRemainingMs: number | null;
+  reshapeRemainingMs?: number | null;
 }
 
 export interface GameOverPayload {

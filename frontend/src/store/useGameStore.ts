@@ -38,6 +38,7 @@ export interface GameState {
   maxHp: number;
   botPosition: Position | null;
   botRemainingMs: number | null;
+  reshapeRemainingMs: number | null;
   botMaxMs: number | null;
   isReshapeAlertActive: boolean;
   reshapeAlertTicksLeft: number;
@@ -81,6 +82,7 @@ const createInitialState = (): GameState => ({
   maxHp: 0,
   botPosition: null,
   botRemainingMs: null,
+  reshapeRemainingMs: null,
   botMaxMs: null,
   isReshapeAlertActive: false,
   reshapeAlertTicksLeft: 0,
@@ -161,8 +163,13 @@ function applyServerEvent(state: GameState, event: GameEventMessage): Partial<Ga
         lastErrorCell: null,
       };
     }
-    case 'MOVE_REJECTED':
-      return { lastErrorCell: { ...event.payload.position } };
+    case 'MOVE_REJECTED': {
+      const { position, value } = event.payload;
+      return {
+        grid: value >= 1 ? withCell(state.grid, position.row, position.col, { currentValue: value, solved: false }) : state.grid,
+        lastErrorCell: { ...position },
+      };
+    }
     case 'BOT_UPDATED': {
       const bot = event.payload;
       if (bot.active && bot.revealed && bot.position !== null) {
@@ -188,6 +195,7 @@ function applyServerEvent(state: GameState, event: GameEventMessage): Partial<Ga
       return {
         elapsedMs: event.payload.elapsedMs,
         botRemainingMs: event.payload.botRemainingMs,
+        reshapeRemainingMs: event.payload.reshapeRemainingMs ?? null,
         reshapeAlertTicksLeft: ticksLeft,
         isReshapeAlertActive: state.isReshapeAlertActive && ticksLeft > 0,
       };

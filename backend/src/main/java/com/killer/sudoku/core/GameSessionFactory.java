@@ -37,7 +37,7 @@ public final class GameSessionFactory {
             String playerName) {
         GeneratedPuzzle puzzle = puzzleGenerator.generateWithMetrics(difficulty, seed, solverStrategy);
         Board board = puzzle.board();
-        PlayerHealth health = new PlayerHealth(GameBalanceConfig.forBotChallenge(difficulty).maxHp());
+        PlayerHealth health = new PlayerHealth(GameBalanceConfig.startingHp(mode, difficulty));
         Random modifierRng = new Random(("modifiers:" + seed).hashCode());
         List<GameModifier> modifiers = difficultyConfig.createModifiers(mode, difficulty, modifierRng, solverStrategy);
         return new GameSession(sessionId, mode, difficulty, solverStrategy, seed, playerName, board, health,

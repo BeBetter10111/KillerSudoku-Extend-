@@ -8,6 +8,7 @@ services:
     restart: unless-stopped
     environment:
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+      GAME_RESHAPE_INTERVAL_MS: "${RESHAPE_INTERVAL_MS:-0}"
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     healthcheck:

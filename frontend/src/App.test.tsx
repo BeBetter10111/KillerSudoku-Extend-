@@ -102,7 +102,7 @@ describe('App', () => {
 
     const dialog = screen.getByRole('dialog');
     expect(dialog.textContent).toContain('Game over');
-    expect(dialog.textContent).toContain('The bot drained all of your HP.');
+    expect(dialog.textContent).toContain('You ran out of HP.');
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Back to Dashboard' }));
@@ -200,5 +200,21 @@ describe('App', () => {
       metrics: algorithmMetrics({ operationType: 'PUZZLE_GEN', strategyUsed: 'NAIVE_ORACLE' }),
     });
     expect(screen.getByTestId('engine-chip').textContent).toBe('Naive Oracle');
+  });
+
+  it('shows three lives in a classic game and the HP bar plus the reshape countdown in a hard bot game', () => {
+    render(<App />);
+    emit({ type: 'GAME_STARTED', payload: boardState({ mode: 'CLASSIC', playerHealth: { maxHp: 3, currentHp: 3 }, bot: null }) });
+    expect(screen.getByTestId('health-bar').getAttribute('data-variant')).toBe('lives');
+    expect(screen.getAllByTestId('life-full')).toHaveLength(3);
+    expect(screen.queryByTestId('reshape-timer')).toBeNull();
+
+    emit({
+      type: 'GAME_STARTED',
+      payload: boardState({ mode: 'BOT_CHALLENGE', difficulty: 'HARD', bot: revealedBot({ row: 4, col: 4 }, 120_000, 120_000) }),
+    });
+    expect(screen.getByTestId('health-bar').getAttribute('data-variant')).toBe('hp');
+    emit({ type: 'TICK', payload: { elapsedMs: 250, botRemainingMs: 119_750, reshapeRemainingMs: 299_750 } });
+    expect(screen.getByTestId('reshape-timer-value').textContent).toBe('5:00');
   });
 });

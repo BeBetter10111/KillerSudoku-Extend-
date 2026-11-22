@@ -2,6 +2,7 @@ package com.killer.sudoku.core;
 
 import com.killer.sudoku.model.Board;
 import com.killer.sudoku.model.BotEntity;
+import com.killer.sudoku.config.GameBalanceConfig;
 import com.killer.sudoku.model.AlgorithmMetrics;
 import com.killer.sudoku.model.Cage;
 import com.killer.sudoku.model.Cell;
@@ -10,6 +11,7 @@ import com.killer.sudoku.model.GameMode;
 import com.killer.sudoku.model.PlayerHealth;
 import com.killer.sudoku.model.Position;
 import com.killer.sudoku.model.SolverStrategyType;
+import com.killer.sudoku.modifier.CageReshapeModifier;
 import com.killer.sudoku.modifier.GameModifier;
 import com.killer.sudoku.service.TimerService;
 import java.util.ArrayList;
@@ -36,6 +38,7 @@ public class GameSession {
     private final SolverStrategyType solverStrategy;
     private final String seed;
     private final String playerName;
+    private final int wrongAnswerPenalty;
     private final Board board;
     private final PlayerHealth playerHealth;
     private final TimerService timer;
@@ -85,6 +88,7 @@ public class GameSession {
         this.solverStrategy = solverStrategy;
         this.seed = seed;
         this.playerName = playerName;
+        this.wrongAnswerPenalty = GameBalanceConfig.wrongAnswerPenalty(gameMode, difficulty);
         this.board = board;
         this.playerHealth = playerHealth;
         this.timer = timer;
@@ -130,7 +134,17 @@ public class GameSession {
         }
         long totalMs = getTotalTimeMs();
         Long botRemainingMs = bot != null && bot.isActive() && bot.isRevealed() ? bot.getRemainingTimeoutMs() : null;
-        dispatch(listener -> listener.onTick(totalMs, botRemainingMs));
+        Long reshapeRemainingMs = reshapeRemainingMs();
+        dispatch(listener -> listener.onTick(totalMs, botRemainingMs, reshapeRemainingMs));
+    }
+
+    private Long reshapeRemainingMs() {
+        for (GameModifier modifier : modifiers) {
+            if (modifier instanceof CageReshapeModifier reshape && reshape.isActive()) {
+                return Math.max(0, reshape.getTimeUntilReshapeMs());
+            }
+        }
+        return null;
     }
 
     public synchronized MoveResult submitValue(Position position, int value) {
@@ -138,17 +152,22 @@ public class GameSession {
             return MoveResult.REJECTED;
         }
         Cell cell = board.getCell(position);
-        if (!cell.isEmpty()) {
+        if (cell.isGiven() || cell.isSolved() || (!cell.isEmpty() && cell.getCurrentValue() == value)) {
             return MoveResult.REJECTED;
         }
         boolean correct = value == cell.getSolutionValue();
         replayLog.add(new MoveRecord(position, value, timer.getElapsedMs(), correct));
+        cell.place(value);
         if (!correct) {
             penaltyMs += WRONG_ANSWER_PENALTY_MS;
+            playerHealth.deductHp(wrongAnswerPenalty);
             dispatch(listener -> listener.onCellUpdated(position, value, false));
+            notifyHpUpdated();
+            if (playerHealth.isDead()) {
+                finish(false, REASON_HP_DEPLETED);
+            }
             return MoveResult.INCORRECT;
         }
-        cell.place(value);
         dispatch(listener -> listener.onCellUpdated(position, value, true));
         for (GameModifier modifier : modifiers) {
             if (modifier.isActive()) {
@@ -216,6 +235,10 @@ public class GameSession {
 
     public String getPlayerName() {
         return playerName;
+    }
+
+    public int getWrongAnswerPenalty() {
+        return wrongAnswerPenalty;
     }
 
     public Board getBoard() {

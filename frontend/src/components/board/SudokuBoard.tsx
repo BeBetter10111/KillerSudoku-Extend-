@@ -21,12 +21,14 @@ function enterDigit(value: number): void {
     return;
   }
   const cell = grid[selectedCell.row]?.[selectedCell.col];
-  if (!cell || cell.given || cell.currentValue !== 0) {
+  if (!cell || cell.given || cell.solved) {
     return;
   }
   if (notesMode) {
-    toggleNoteNumber(value);
-  } else {
+    if (cell.currentValue === 0) {
+      toggleNoteNumber(value);
+    }
+  } else if (cell.currentValue !== value) {
     submitCell(selectedCell.row, selectedCell.col, value);
   }
 }
@@ -99,7 +101,9 @@ function Numpad() {
     const counts = new Array<number>(GRID_SIZE + 1).fill(0);
     for (const line of grid) {
       for (const cell of line) {
-        counts[cell.currentValue] += 1;
+        if (cell.given || cell.solved) {
+          counts[cell.currentValue] += 1;
+        }
       }
     }
     return counts;
@@ -190,6 +194,7 @@ export function SudokuBoard({ className = '' }: { className?: string }) {
                   col={cell.col}
                   value={cell.currentValue}
                   given={cell.given}
+                  wrong={cell.currentValue !== 0 && !cell.given && !cell.solved}
                   notes={notes[`${cell.row},${cell.col}`]}
                   highlight={highlightFor(cell.row, cell.col, cell.currentValue, selectedCell, selectedValue)}
                   highlightValue={selectedValue}

@@ -237,4 +237,65 @@ describe('SudokuBoard', () => {
       'animate-cage-alert',
     );
   });
+
+  describe('wrong numbers', () => {
+    const wrongCell = () => {
+      startGame();
+      emit({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 4, correct: false } });
+    };
+
+    it('shows a wrong number in red and a correct one in blue', () => {
+      startGame({ cells: gridWith({ '2,2': 7 }) });
+      render(<SudokuBoard />);
+      emit({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 4, correct: false } });
+
+      const wrong = cellAt(1, 1);
+      expect(wrong.getAttribute('data-wrong')).toBe('true');
+      expect(wrong.getAttribute('aria-label')).toContain('wrong');
+      expect(wrong.querySelector('span span')?.className).toContain('text-red-400');
+      const correct = cellAt(2, 2);
+      expect(correct.getAttribute('data-wrong')).toBe('false');
+      expect(correct.querySelector('span span')?.className).toContain('text-sky-300');
+      expect(cellAt(0, 0).querySelector('span span')?.className).toContain('text-slate-100');
+    });
+
+    it('lets the player type over a wrong number but not over a solved one', () => {
+      render(<SudokuBoard />);
+      startGame({ cells: gridWith({ '2,2': 7 }) });
+      emit({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 4, correct: false } });
+
+      select(1, 1);
+      press('6');
+      expect(submitCell).toHaveBeenCalledWith(1, 1, 6);
+
+      vi.mocked(submitCell).mockClear();
+      select(2, 2);
+      press('3');
+      select(0, 0);
+      press('3');
+      expect(submitCell).not.toHaveBeenCalled();
+    });
+
+    it('does not resend the same wrong number', () => {
+      render(<SudokuBoard />);
+      wrongCell();
+      select(1, 1);
+      press('4');
+      expect(submitCell).not.toHaveBeenCalled();
+    });
+
+    it('does not count a wrong number as one of the nine placed digits', () => {
+      const values: Record<string, number> = {};
+      for (let row = 0; row < 8; row += 1) {
+        values[`${row + 1},${row + 1}`] = 1;
+      }
+      startGame({ cells: gridWith(values, []) });
+      render(<SudokuBoard />);
+      emit({ type: 'MOVE_REJECTED', payload: { position: { row: 0, col: 0 }, value: 1, correct: false } });
+      expect(screen.getByRole('button', { name: '1' }).hasAttribute('disabled')).toBe(false);
+
+      emit({ type: 'CELL_UPDATED', payload: { position: { row: 0, col: 0 }, value: 1, correct: true } });
+      expect(screen.getByRole('button', { name: '1' }).hasAttribute('disabled')).toBe(true);
+    });
+  });
 });

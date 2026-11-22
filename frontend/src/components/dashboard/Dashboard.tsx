@@ -42,13 +42,13 @@ const MODES: ReadonlyArray<{ value: GameMode; title: string; description: string
   {
     value: 'CLASSIC',
     title: 'Classic',
-    description: 'Pure Killer Sudoku. Rows, columns, boxes and cage sums. No modifiers.',
+    description: 'Pure Killer Sudoku with 3 lives. Every wrong number costs one life.',
     Icon: Grid3x3,
   },
   {
     value: 'BOT_CHALLENGE',
     title: 'Bot Challenge',
-    description: 'A hide-and-seek bot hunts your HP while you solve.',
+    description: 'A bot with a 2-minute timer hunts your HP. Wrong numbers cost HP too.',
     Icon: Bot,
   },
 ];
