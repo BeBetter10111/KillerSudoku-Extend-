@@ -9,22 +9,29 @@ and pushes state to a thin React client over WebSocket (STOMP).
 
 ## Game modes
 
-| Mode | Difficulty | Modifiers |
+| Mode | Difficulty | Rules |
 |---|---|---|
-| `CLASSIC` | EASY / MEDIUM / HARD | none |
-| `BOT_CHALLENGE` | EASY | Hide & Seek Bot + shared HP (bot timer 45 s, -15 HP) |
-| `BOT_CHALLENGE` | MEDIUM | Hide & Seek Bot + shared HP (bot timer 30 s, -25 HP) |
-| `BOT_CHALLENGE` | HARD | Bot (25 s, -30 HP) + Cage Reshape every 5 minutes (alert 10 s before) |
+| `CLASSIC` | EASY / MEDIUM / HARD | 3 lives, no modifiers |
+| `BOT_CHALLENGE` | EASY | Bot (-15 HP per timeout) + shared HP, wrong number -10 HP |
+| `BOT_CHALLENGE` | MEDIUM | Bot (-25 HP per timeout) + shared HP, wrong number -15 HP |
+| `BOT_CHALLENGE` | HARD | Bot (-30 HP per timeout), wrong number -20 HP, plus a Cage Reshape every 5 minutes |
 
-**Hide & Seek Bot.** The bot hides in an empty cell. Solving that cell reveals it and makes it jump to a new
-empty cell with a countdown; each consecutive reveal shortens the countdown by 10 % (floor: 5 s). If the countdown
-expires, HP is deducted and the bot hides again. The bot switches off when fewer than 2 empty cells remain.
+**Wrong and correct numbers.** A correct number is shown in blue and costs nothing. A wrong number is written into the
+cell in red and costs one life in `CLASSIC` (3 lives, the game is lost at 0) or HP in `BOT_CHALLENGE` (100 HP, lost at 0).
+A red cell can be overwritten with another number (a different wrong number costs again; the same one is ignored). Each
+wrong number also adds 5 s to the final time (`GameSession.WRONG_ANSWER_PENALTY_MS`).
 
-**Cage Reshape.** Every 300 000 ms the cages are regrouped (Union-Find + backtracking). Filled values are kept and
-the puzzle is guaranteed to still have a unique solution. An `ALERT_WARNING` is sent 10 s before.
+**Bot.** The bot is visible from the first second, standing on an empty cell with a 2-minute countdown. Solving its
+cell makes it jump to a new empty cell; each consecutive jump shortens the countdown by 10 % (floor: 5 s). When the
+countdown reaches zero HP is deducted, the bot moves to another empty cell with a fresh 2-minute countdown, and so on.
+It switches off when fewer than 2 empty cells remain or HP reaches 0.
 
-**Wrong answers** are never written to the board. Each costs +5 s on the final time (`GameSession.WRONG_ANSWER_PENALTY_MS`),
-otherwise the answer could be brute-forced.
+**Cage Reshape (`BOT_CHALLENGE` + `HARD` only).** Every 300 000 ms the cages are regrouped (Union-Find + backtracking).
+Filled values are kept and the puzzle is guaranteed to still have a unique solution. An `ALERT_WARNING` is sent 10 s
+before, and every `TICK` carries `reshapeRemainingMs`, shown in the HUD as "Cages reshape in m:ss". If no new unique
+layout is found the server retries after 5 s. To see a reshape quickly, start the backend with
+`GAME_RESHAPE_INTERVAL_MS=30000` (docker compose: `RESHAPE_INTERVAL_MS=30000 docker compose up --build`); `0` keeps the
+5-minute default.
 
 **Daily Seed Challenge.** `GET /api/daily-seed` returns `daily-YYYY-MM-DD` (UTC). Starting a game with that seed gives
 everyone the same puzzle. A win is replayed on a fresh seeded session by `ServerReplayValidator`
