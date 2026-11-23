@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.killer.sudoku.model.Difficulty;
+import com.killer.sudoku.model.GameMode;
 import org.junit.jupiter.api.Test;
 
 class GameBalanceConfigTest {
@@ -15,7 +16,9 @@ class GameBalanceConfigTest {
         GameBalanceConfig c = GameBalanceConfig.forBotChallenge(Difficulty.EASY);
         assertEquals(100, c.maxHp());
         assertEquals(45_000, c.initialBotTimeoutMs());
-        assertEquals(10, c.hpPenalty());
+        assertEquals(120_000, c.firstBotTimeoutMs());
+        assertEquals(15, c.hpPenalty());
+        assertEquals(15, c.minHpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertFalse(c.hasReshape());
     }
@@ -25,7 +28,9 @@ class GameBalanceConfigTest {
         GameBalanceConfig c = GameBalanceConfig.forBotChallenge(Difficulty.MEDIUM);
         assertEquals(100, c.maxHp());
         assertEquals(50_000, c.initialBotTimeoutMs());
-        assertEquals(20, c.hpPenalty());
+        assertEquals(120_000, c.firstBotTimeoutMs());
+        assertEquals(25, c.hpPenalty());
+        assertEquals(10, c.minHpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertFalse(c.hasReshape());
     }
@@ -34,12 +39,20 @@ class GameBalanceConfigTest {
     void hardPreset() {
         GameBalanceConfig c = GameBalanceConfig.forBotChallenge(Difficulty.HARD);
         assertEquals(100, c.maxHp());
-        assertEquals(90_000, c.initialBotTimeoutMs());
-        assertEquals(20, c.hpPenalty());
+        assertEquals(60_000, c.initialBotTimeoutMs());
+        assertEquals(180_000, c.firstBotTimeoutMs());
+        assertEquals(30, c.hpPenalty());
+        assertEquals(5, c.minHpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertTrue(c.hasReshape());
-        assertEquals(180_000, c.reshapeIntervalMs());
+        assertEquals(300_000, c.reshapeIntervalMs());
         assertEquals(10_000, c.preReshapeAlertMs());
+    }
+
+    @Test
+    void classicHasThreeLivesAndOneLifePerWrongAnswer() {
+        assertEquals(3, GameBalanceConfig.startingHp(GameMode.CLASSIC, Difficulty.HARD));
+        assertEquals(1, GameBalanceConfig.wrongAnswerPenalty(GameMode.CLASSIC, Difficulty.HARD));
     }
 
     @Test
@@ -48,5 +61,7 @@ class GameBalanceConfigTest {
         assertThrows(IllegalArgumentException.class, () -> new GameBalanceConfig(100, 1000, 1, 1.0, 500, 0, 0));
         assertThrows(IllegalArgumentException.class, () -> new GameBalanceConfig(100, 1000, 1, 0.1, 2000, 0, 0));
         assertThrows(IllegalArgumentException.class, () -> new GameBalanceConfig(100, 1000, 1, 0.1, 500, 5000, 5000));
+        assertThrows(IllegalArgumentException.class,
+                () -> new GameBalanceConfig(100, 1000, 5, 0.1, 500, 0, 0, 10, 1000, 6));
     }
 }

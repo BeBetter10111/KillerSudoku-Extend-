@@ -33,15 +33,14 @@ class GameSessionTest {
     }
 
     @Test
-    void startEmitsInitStateFirstAndFoldsInitialBotIntoSnapshot() {
+    void startEmitsInitStateFirstAndHoldsBotBackUntilSpawnDelay() {
         RecordingListener listener = new RecordingListener();
         GameSession session = session(GameMode.BOT_CHALLENGE, Difficulty.MEDIUM, "start", listener);
         session.start();
         session.start();
 
         assertEquals(List.of("INIT"), listener.types());
-        assertTrue(session.getBot().isPresent());
-        assertTrue(session.getBot().get().isRevealed());
+        assertTrue(session.getBot().isEmpty());
     }
 
     @Test
@@ -164,8 +163,8 @@ class GameSessionTest {
         session.start();
         int guard = 0;
         while (!session.isFinished() && guard++ < 10_000) {
-            BotEntity bot = session.getBot().orElseThrow();
-            if (bot.isActive() && !bot.isRevealed()) {
+            BotEntity bot = session.getBot().orElse(null);
+            if (bot != null && bot.isActive() && !bot.isRevealed()) {
                 TestSessions.solve(session, bot.getPosition());
             } else {
                 session.tick(GameSession.TICK_MS);

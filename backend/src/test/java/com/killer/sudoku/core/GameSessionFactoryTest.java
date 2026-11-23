@@ -42,7 +42,7 @@ class GameSessionFactoryTest {
         assertEquals(Difficulty.EASY, session.getDifficulty());
         assertEquals("s", session.getSeed());
         assertEquals("Frog", session.getPlayerName());
-        assertEquals(100, session.getPlayerHealth().getMaxHp());
+        assertEquals(3, session.getPlayerHealth().getMaxHp());
     }
 
     @Test

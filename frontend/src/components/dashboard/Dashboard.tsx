@@ -48,7 +48,7 @@ const MODES: ReadonlyArray<{ value: GameMode; title: string; description: string
   {
     value: 'BOT_CHALLENGE',
     title: 'Bot Challenge',
-    description: 'A bot with a 2-minute timer hunts your HP. Wrong numbers cost HP too.',
+    description: 'A bot with a 2-3 minute first timer hunts your HP, then 45-60s per round. Wrong numbers cost HP too.',
     Icon: Bot,
   },
 ];
@@ -82,20 +82,25 @@ const SOLVER_ENGINES: ReadonlyArray<{
   },
 ];
 
-const BOT_TUNING: Record<Difficulty, { timeoutSeconds: number; hpPressure: number | string }> = {
-  EASY: { timeoutSeconds: 45, hpPressure: 15 },
-  MEDIUM: { timeoutSeconds: 30, hpPressure: 'Random (10 - 25)' },
-  HARD: { timeoutSeconds: 25, hpPressure: 'Random (5 - 30)' },
+const BOT_TUNING: Record<
+  Difficulty,
+  { firstTimeoutMinutes: number; timeoutSeconds: number; hpPressure: number | string }
+> = {
+  EASY: { firstTimeoutMinutes: 2, timeoutSeconds: 45, hpPressure: 15 },
+  MEDIUM: { firstTimeoutMinutes: 2, timeoutSeconds: 50, hpPressure: 'Random (10 - 25)' },
+  HARD: { firstTimeoutMinutes: 3, timeoutSeconds: 60, hpPressure: 'Random (5 - 30)' },
 };
 
 const PLAYER_NAME_KEY = 'killer-sudoku:player-name';
 const MAX_PLAYER_NAME_LENGTH = 20;
 
 export function modifierBadges(mode: GameMode, difficulty: Difficulty): ModifierBadge[] {
+  const emptyBoard: ModifierBadge[] =
+    difficulty === 'HARD' ? [{ label: 'Empty board: no given numbers', tone: 'amber' }] : [];
   if (mode === 'CLASSIC') {
-    return [{ label: 'No modifiers', tone: 'slate' }];
+    return [{ label: 'No modifiers', tone: 'slate' }, ...emptyBoard];
   }
-  const { timeoutSeconds, hpPressure } = BOT_TUNING[difficulty];
+  const { firstTimeoutMinutes, timeoutSeconds, hpPressure } = BOT_TUNING[difficulty];
   const badges: ModifierBadge[] = [
     {
       label: typeof hpPressure === 'number'
@@ -103,7 +108,9 @@ export function modifierBadges(mode: GameMode, difficulty: Difficulty): Modifier
         : `Bot HP pressure: ${hpPressure} HP`,
       tone: 'fuchsia',
     },
-    { label: `Bot timer ${timeoutSeconds}s`, tone: 'fuchsia' },
+    { label: `First bot timer ${firstTimeoutMinutes} min`, tone: 'fuchsia' },
+    { label: `Then bot timer ${timeoutSeconds}s`, tone: 'fuchsia' },
+    ...emptyBoard,
   ];
   if (difficulty === 'HARD') {
     badges.push({ label: 'Cage Reshape every 5 min', tone: 'amber' });

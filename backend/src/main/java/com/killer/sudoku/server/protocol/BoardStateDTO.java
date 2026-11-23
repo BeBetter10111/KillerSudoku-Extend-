@@ -69,7 +69,7 @@ public record BoardStateDTO(
                 rows,
                 board.getCages(),
                 board.getEmptyCellsCount(),
-                botChallenge ? PlayerHealthDTO.from(session.getPlayerHealth()) : null,
+                PlayerHealthDTO.from(session.getPlayerHealth()),
                 botChallenge ? session.getBot().map(BotDTO::from).orElse(null) : null);
     }
 }

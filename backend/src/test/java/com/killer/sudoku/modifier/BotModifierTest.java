@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 class BotModifierTest {
 
-    private final GameBalanceConfig balance = GameBalanceConfig.forBotChallenge(Difficulty.MEDIUM);
+    private final GameBalanceConfig balance = new GameBalanceConfig(100, 50_000, 25, 0.10, 5_000, 0, 0, 10);
 
     private BotModifier newModifier(long seed) {
         return new BotModifier(balance, new WeightedRandomBotStrategy(), new Random(seed));
@@ -38,6 +38,7 @@ class BotModifierTest {
 
             BotEntity bot = modifier.getBot().orElseThrow();
             assertTrue(bot.isRevealed(), difficulty.name());
+            assertEquals(config.firstBotTimeoutMs(), bot.getMaxTimeoutMs(), difficulty.name());
             assertTrue(session.getBoard().getCell(bot.getPosition()).isEmpty(), difficulty.name());
             assertEquals(List.of("BOT"), session.types(), difficulty.name());
             assertTrue(session.lastBot().revealed(), difficulty.name());
@@ -164,7 +165,8 @@ class BotModifierTest {
         modifier.onTick(session, balance.initialBotTimeoutMs());
 
         BotEntity bot = modifier.getBot().orElseThrow();
-        assertEquals(100 - balance.hpPenalty(), session.getPlayerHealth().getCurrentHp());
+        int hpPenalty = 100 - session.getPlayerHealth().getCurrentHp();
+        assertEquals(balance.hpPenalty(), hpPenalty);
         assertTrue(bot.isRevealed());
         assertNotEquals(timedOutAt, bot.getPosition());
         assertTrue(session.getBoard().getCell(bot.getPosition()).isEmpty());
@@ -174,6 +176,34 @@ class BotModifierTest {
         assertTrue(session.lastBot().revealed());
         assertTrue(session.lastBot().active());
         assertTrue(modifier.isActive());
+    }
+
+    @Test
+    void mediumAndHardTimeoutPressureIsRandomWithinConfiguredRange() {
+        for (Difficulty difficulty : List.of(Difficulty.MEDIUM, Difficulty.HARD)) {
+            GameBalanceConfig config = GameBalanceConfig.forBotChallenge(difficulty);
+            int firstPenalty = -1;
+            boolean sawDifferentPenalty = false;
+            for (int seed = 0; seed < 50; seed++) {
+                RecordingSession session = RecordingSession.withPuzzle(difficulty, "pressure-" + seed, config.maxHp());
+                BotModifier modifier =
+                        new BotModifier(config, new WeightedRandomBotStrategy(), new Random(seed));
+                modifier.onInit(session);
+                Position at = modifier.getBot().orElseThrow().getPosition();
+                session.solve(at);
+                modifier.onCorrectAnswer(session, at);
+                modifier.onTick(session, config.initialBotTimeoutMs());
+
+                int penalty = config.maxHp() - session.getPlayerHealth().getCurrentHp();
+                assertTrue(penalty >= config.minHpPenalty() && penalty <= config.hpPenalty());
+                if (firstPenalty < 0) {
+                    firstPenalty = penalty;
+                } else if (penalty != firstPenalty) {
+                    sawDifferentPenalty = true;
+                }
+            }
+            assertTrue(sawDifferentPenalty, difficulty.name());
+        }
     }
 
     @Test

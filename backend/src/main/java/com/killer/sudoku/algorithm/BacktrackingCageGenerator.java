@@ -23,6 +23,7 @@ public final class BacktrackingCageGenerator {
     private static final int PARTITION_STEP_BUDGET = 20_000;
     private static final int MAX_PARTITION_ATTEMPTS = 50;
     private static final int MAX_RESHAPE_ATTEMPTS = 30;
+    private static final int MIN_KNOWN_CELLS_FOR_RESHAPE = 10;
     private static final Difficulty RESHAPE_DIFFICULTY = Difficulty.MEDIUM;
 
     private static final int[][] DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
@@ -77,6 +78,9 @@ public final class BacktrackingCageGenerator {
         }
         SudokuSolver solver = SolverFactory.forStrategy(strategy);
         AlgorithmMetrics total = AlgorithmMetrics.empty(strategy, AlgorithmMetrics.CAGE_RESHAPE);
+        if (CELL_COUNT - currentBoard.getEmptyCellsCount() < MIN_KNOWN_CELLS_FOR_RESHAPE) {
+            return new CageLayoutResult(currentBoard.getCages(), total);
+        }
         double millis = 0;
         long bytes = 0;
         for (int attempt = 0; attempt < MAX_RESHAPE_ATTEMPTS; attempt++) {

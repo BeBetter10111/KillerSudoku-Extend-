@@ -35,7 +35,7 @@ public final class BotModifier implements GameModifier {
             return;
         }
         Position start = strategy.selectNext(board, null, rng).orElseThrow();
-        bot = new BotEntity(start, config.initialBotTimeoutMs());
+        bot = new BotEntity(start, config.firstBotTimeoutMs());
         bot.reveal();
         session.notifyBotUpdated(bot);
     }
@@ -71,7 +71,10 @@ public final class BotModifier implements GameModifier {
             return;
         }
         PlayerHealth health = session.getPlayerHealth();
-        health.deductHp(config.hpPenalty());
+        int hpPenalty = config.minHpPenalty() == config.hpPenalty()
+                ? config.hpPenalty()
+                : rng.nextInt(config.hpPenalty() - config.minHpPenalty() + 1) + config.minHpPenalty();
+        health.deductHp(hpPenalty);
         consecutiveReveals = 0;
         session.notifyHpUpdated();
         Board board = session.getBoard();

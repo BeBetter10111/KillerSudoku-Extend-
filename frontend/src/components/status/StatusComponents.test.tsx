@@ -126,6 +126,21 @@ describe('BotTimer', () => {
   });
 });
 
+describe('BotTimer spawn countdown', () => {
+  it('shows when the bot arrives until it is revealed', () => {
+    startGame();
+    render(<BotTimer />);
+    emit({ type: 'TICK', payload: { elapsedMs: 250, botRemainingMs: null, botSpawnRemainingMs: 119_750 } });
+    expect(screen.getByTestId('bot-spawn-timer').textContent).toContain('1:59');
+    expect(screen.queryByTestId('bot-timer')).toBeNull();
+
+    emit({ type: 'BOT_UPDATED', payload: revealedBot({ row: 4, col: 4 }, 45000, 45000) });
+    emit({ type: 'TICK', payload: { elapsedMs: 500, botRemainingMs: 44_750, botSpawnRemainingMs: null } });
+    expect(screen.queryByTestId('bot-spawn-timer')).toBeNull();
+    expect(screen.getByTestId('bot-timer')).toBeTruthy();
+  });
+});
+
 describe('HealthBar lives (classic mode)', () => {
   const classic = () => startGame({ mode: 'CLASSIC', playerHealth: { maxHp: 3, currentHp: 3 }, bot: null });
 

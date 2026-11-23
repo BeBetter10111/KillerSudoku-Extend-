@@ -32,15 +32,21 @@ afterEach(() => {
 
 describe('modifierBadges', () => {
   it('describes the modifiers of every mode and difficulty', () => {
-    expect(modifierBadges('CLASSIC', 'HARD').map((b) => b.label)).toEqual(['No modifiers']);
+    expect(modifierBadges('CLASSIC', 'HARD').map((b) => b.label)).toEqual([
+      'No modifiers',
+      'Empty board: no given numbers',
+    ]);
     expect(modifierBadges('BOT_CHALLENGE', 'EASY').map((b) => b.label)).toEqual([
       'Bot HP pressure: -15 HP',
-      'Bot timer 45s',
+      'First bot timer 2 min',
+      'Then bot timer 45s',
     ]);
     expect(modifierBadges('BOT_CHALLENGE', 'MEDIUM')[0].label).toBe('Bot HP pressure: Random (10 - 25) HP');
     expect(modifierBadges('BOT_CHALLENGE', 'HARD').map((b) => b.label)).toEqual([
       'Bot HP pressure: Random (5 - 30) HP',
-      'Bot timer 25s',
+      'First bot timer 3 min',
+      'Then bot timer 60s',
+      'Empty board: no given numbers',
       'Cage Reshape every 5 min',
     ]);
   });

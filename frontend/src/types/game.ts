@@ -180,6 +180,7 @@ export interface TickPayload {
   elapsedMs: number;
   botRemainingMs: number | null;
   reshapeRemainingMs?: number | null;
+  botSpawnRemainingMs?: number | null;
 }
 
 export interface GameOverPayload {
