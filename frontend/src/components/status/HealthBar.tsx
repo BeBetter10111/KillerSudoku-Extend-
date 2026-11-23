@@ -20,6 +20,7 @@ function toneFor(ratio: number): keyof typeof TONES {
 export function HealthBar() {
   const hp = useGameStore((state) => state.hp);
   const maxHp = useGameStore((state) => state.maxHp);
+  const mode = useGameStore((state) => state.mode);
   const [isHit, setIsHit] = useState(false);
   const previousHp = useRef(hp);
 
@@ -43,12 +44,57 @@ export function HealthBar() {
     return null;
   }
 
+  if (mode === 'CLASSIC') {
+    return (
+      <div
+        data-testid="health-bar"
+        data-variant="lives"
+        className={`relative w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 ${
+          isHit ? 'animate-shake motion-reduce:animate-none' : ''
+        }`}
+      >
+        <div className="mb-1 flex items-center justify-between text-sm font-semibold">
+          <span className="text-rose-300">Lives</span>
+          <span className="tabular-nums text-slate-200">
+            {hp} / {maxHp}
+          </span>
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Lives remaining"
+          aria-valuemin={0}
+          aria-valuemax={maxHp}
+          aria-valuenow={hp}
+          className="flex items-center gap-1.5"
+        >
+          {Array.from({ length: maxHp }, (_, index) => (
+            <Heart
+              key={index}
+              data-testid={index < hp ? 'life-full' : 'life-lost'}
+              className={`h-7 w-7 transition-colors duration-300 ${
+                index < hp ? 'fill-rose-500 text-rose-500' : 'fill-transparent text-slate-600'
+              }`}
+              aria-hidden="true"
+            />
+          ))}
+        </div>
+        {isHit && (
+          <div
+            data-testid="health-flash"
+            className="pointer-events-none absolute inset-0 animate-hit-flash rounded-xl bg-rose-300 motion-reduce:hidden"
+          />
+        )}
+      </div>
+    );
+  }
+
   const ratio = Math.min(1, Math.max(0, hp / maxHp));
   const tone = TONES[toneFor(ratio)];
 
   return (
     <div
       data-testid="health-bar"
+      data-variant="hp"
       className={`w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 ${
         isHit ? 'animate-shake motion-reduce:animate-none' : ''
       }`}

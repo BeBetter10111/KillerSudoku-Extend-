@@ -14,7 +14,7 @@ interface ResultModalProps {
 }
 
 const LOSS_MESSAGES: Record<string, string> = {
-  HP_DEPLETED: 'The bot drained all of your HP.',
+  HP_DEPLETED: 'You ran out of HP.',
   FORFEIT: 'You left the game.',
   SESSION_EXPIRED: 'The session expired after two hours.',
 };
@@ -31,7 +31,7 @@ export function ResultModal({
 }: ResultModalProps) {
   const isDaily = seed !== null && seed.startsWith('daily-');
   const Icon = won ? Trophy : Skull;
-  const message = won ? 'Every cage is solved.' : (reason && LOSS_MESSAGES[reason]) || 'The game ended.';
+  const message = won ? 'Every cage is solved.' : (reason === 'HP_DEPLETED' && mode === 'CLASSIC' ? 'You ran out of lives.' : reason && LOSS_MESSAGES[reason]) || 'The game ended.';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">

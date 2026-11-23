@@ -15,6 +15,7 @@ const stats = (strategy: StrategyBenchmarkStats['strategy'], p50: number, p95: n
   avgNodesVisited: 1000,
   avgPrunedBranches: strategy === 'NAIVE_ORACLE' ? 0 : 250,
   peakMemoryBytes: 4096,
+  bitmaskOverheadBytes: 0,
 });
 
 const metrics: AlgorithmMetrics = {
@@ -26,6 +27,7 @@ const metrics: AlgorithmMetrics = {
   unionFindOps: 0,
   memoryBytes: 1024,
   oracleVerified: true,
+  bitmaskOverheadBytes: 0,
 };
 
 describe('algorithm evidence types', () => {
@@ -49,6 +51,7 @@ describe('algorithm evidence types', () => {
 
   it('describes per-operation metrics with the backend field names', () => {
     expect(Object.keys(metrics).sort()).toEqual([
+      'bitmaskOverheadBytes',
       'executionTimeMs',
       'memoryBytes',
       'nodesVisited',

@@ -21,7 +21,7 @@ public interface GameEventListener {
 
     void onCagesReshaped(List<Cage> cages, AlgorithmMetrics metrics);
 
-    void onTick(long elapsedMs, Long botRemainingMs);
+    void onTick(long elapsedMs, Long botRemainingMs, Long reshapeRemainingMs);
 
     void onGameOver(boolean won, long finalTimeMs, String reason);
 }

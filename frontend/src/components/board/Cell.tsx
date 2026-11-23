@@ -11,6 +11,7 @@ export interface CellProps {
   col: number;
   value: number;
   given: boolean;
+  wrong?: boolean;
   notes: number[] | undefined;
   highlight: CellHighlight;
   highlightValue: number;
@@ -60,6 +61,7 @@ export const Cell = memo(function Cell({
   col,
   value,
   given,
+  wrong = false,
   notes,
   highlight,
   highlightValue,
@@ -81,6 +83,7 @@ export const Cell = memo(function Cell({
     `Row ${row + 1}, column ${col + 1}`,
     value !== 0 ? String(value) : 'empty',
     given ? 'given' : null,
+    wrong ? 'wrong' : null,
     isBot ? 'bot here' : null,
   ]
     .filter(Boolean)
@@ -95,6 +98,7 @@ export const Cell = memo(function Cell({
       data-col={col}
       data-highlight={highlight}
       data-error={isError}
+      data-wrong={wrong}
       data-bot={isBot}
       onClick={() => onSelect(row, col)}
       className={`relative aspect-square min-w-0 select-none outline-none transition-colors duration-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${background} ${borderClasses(row, col)}`}
@@ -108,7 +112,7 @@ export const Cell = memo(function Cell({
         {value !== 0 && (
           <span
             className={`text-xl leading-none sm:text-3xl ${
-              given ? 'font-bold text-slate-100' : 'font-semibold text-sky-300'
+              given ? 'font-bold text-slate-100' : wrong ? 'font-bold text-red-400' : 'font-semibold text-sky-300'
             }`}
           >
             {value}

@@ -15,10 +15,17 @@ public final class DifficultyConfig {
 
     private final WeightedRandomBotStrategy botStrategy;
     private final BacktrackingCageGenerator cageGenerator;
+    private final long reshapeIntervalOverrideMs;
 
     public DifficultyConfig(WeightedRandomBotStrategy botStrategy, BacktrackingCageGenerator cageGenerator) {
+        this(botStrategy, cageGenerator, 0);
+    }
+
+    public DifficultyConfig(
+            WeightedRandomBotStrategy botStrategy, BacktrackingCageGenerator cageGenerator, long reshapeIntervalOverrideMs) {
         this.botStrategy = botStrategy;
         this.cageGenerator = cageGenerator;
+        this.reshapeIntervalOverrideMs = Math.max(0, reshapeIntervalOverrideMs);
     }
 
     public List<GameModifier> createModifiers(GameMode mode, Difficulty difficulty, Random rng) {
@@ -38,8 +45,9 @@ public final class DifficultyConfig {
         GameModifier bot = new BotModifier(balance, botStrategy, new Random(rng.nextLong()));
         return switch (difficulty) {
             case EASY, MEDIUM -> List.of(bot);
-            case HARD -> List.of(
-                    bot, new CageReshapeModifier(balance, cageGenerator, strategy, new Random(rng.nextLong())));
+            case HARD -> List.of(bot, new CageReshapeModifier(
+                    reshapeIntervalOverrideMs > 0 ? balance.withReshapeInterval(reshapeIntervalOverrideMs) : balance,
+                    cageGenerator, strategy, new Random(rng.nextLong())));
         };
     }
 }

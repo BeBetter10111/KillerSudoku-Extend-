@@ -19,7 +19,7 @@ public final class Payloads {
     public record CagesReshaped(List<Cage> cages, AlgorithmMetrics metrics) {
     }
 
-    public record Tick(long elapsedMs, Long botRemainingMs) {
+    public record Tick(long elapsedMs, Long botRemainingMs, Long reshapeRemainingMs) {
     }
 
     public record GameOver(boolean won, long finalTimeMs, String reason) {

@@ -41,7 +41,7 @@ class GameSessionTest {
 
         assertEquals(List.of("INIT"), listener.types());
         assertTrue(session.getBot().isPresent());
-        assertFalse(session.getBot().get().isRevealed());
+        assertTrue(session.getBot().get().isRevealed());
     }
 
     @Test

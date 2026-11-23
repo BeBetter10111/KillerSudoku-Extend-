@@ -38,8 +38,7 @@ class ServerReplayValidatorTest {
         assertTrue(session.getPenaltyMs() > 0);
 
         ServerReplayValidator.Result result = validator.validate(session);
-
-        assertTrue(result.valid(), result.reason());
+        assertTrue(result.valid(), "reason: " + result.reason());
         assertEquals(session.getFinalTimeMs(), result.verifiedTimeMs());
     }
 
@@ -53,7 +52,7 @@ class ServerReplayValidatorTest {
 
         ServerReplayValidator.Result result = validator.validate(session);
 
-        assertTrue(result.valid(), result.reason());
+        assertTrue(result.valid(), "reason: " + result.reason());
     }
 
     @Test
@@ -160,7 +159,7 @@ class ServerReplayValidatorTest {
 
             ServerReplayValidator.Result result = validator.validate(session);
 
-            assertTrue(result.valid(), strategy + ": " + result.reason());
+            assertTrue(result.valid(), strategy + ": reason: " + result.reason());
             assertEquals(session.getFinalTimeMs(), result.verifiedTimeMs());
         }
     }

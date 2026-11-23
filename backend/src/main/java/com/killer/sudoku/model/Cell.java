@@ -1,8 +1,5 @@
 package com.killer.sudoku.model;
 
-import lombok.Getter;
-
-@Getter
 public class Cell {
 
     public static final int EMPTY = 0;
@@ -27,6 +24,30 @@ public class Cell {
 
     public Position position() {
         return new Position(row, col);
+    }
+
+    public int getRow() {
+        return row;
+    }
+
+    public int getCol() {
+        return col;
+    }
+
+    public int getSolutionValue() {
+        return solutionValue;
+    }
+
+    public boolean isGiven() {
+        return given;
+    }
+
+    public int getCurrentValue() {
+        return currentValue;
+    }
+
+    public boolean isSolved() {
+        return solved;
     }
 
     public boolean isEmpty() {

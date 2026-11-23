@@ -85,7 +85,7 @@ public class RecordingListener implements GameEventListener {
     }
 
     @Override
-    public void onTick(long elapsedMs, Long botRemainingMs) {
+    public void onTick(long elapsedMs, Long botRemainingMs, Long reshapeRemainingMs) {
         events.add(new Event("TICK", elapsedMs));
     }
 

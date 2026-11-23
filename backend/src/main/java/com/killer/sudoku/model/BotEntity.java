@@ -1,8 +1,5 @@
 package com.killer.sudoku.model;
 
-import lombok.Getter;
-
-@Getter
 public class BotEntity {
 
     private Position position;
@@ -44,6 +41,26 @@ public class BotEntity {
 
     public boolean isExpired() {
         return remainingTimeoutMs <= 0;
+    }
+
+    public Position getPosition() {
+        return position;
+    }
+
+    public boolean isRevealed() {
+        return revealed;
+    }
+
+    public long getRemainingTimeoutMs() {
+        return remainingTimeoutMs;
+    }
+
+    public long getMaxTimeoutMs() {
+        return maxTimeoutMs;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 
     public void deactivate() {

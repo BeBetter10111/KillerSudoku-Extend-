@@ -56,6 +56,7 @@ export const algorithmMetrics = (overrides: Partial<AlgorithmMetrics> = {}): Alg
   unionFindOps: 310,
   memoryBytes: 65536,
   oracleVerified: true,
+  bitmaskOverheadBytes: 0,
   ...overrides,
 });
 

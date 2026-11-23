@@ -40,14 +40,14 @@ class BoardStateDTOTest {
     }
 
     @Test
-    void botChallengeSnapshotHidesBotPositionAndExposesHealth() {
+    void botChallengeSnapshotShowsBotPositionAndExposesHealth() {
         GameSession session = started(GameMode.BOT_CHALLENGE, Difficulty.MEDIUM);
         BoardStateDTO dto = BoardStateDTO.from(session);
 
         assertEquals(100, dto.playerHealth().currentHp());
         assertTrue(dto.bot().active());
-        assertFalse(dto.bot().revealed());
-        assertNull(dto.bot().position());
+        assertTrue(dto.bot().revealed());
+        assertTrue(dto.bot().position() != null);
     }
 
     @Test
@@ -84,7 +84,8 @@ class BoardStateDTOTest {
         assertEquals(List.of("maxHp", "currentHp"), fieldNames(payload.get("playerHealth")));
         assertEquals(List.of("active", "revealed", "position", "remainingTimeoutMs", "maxTimeoutMs"),
                 fieldNames(payload.get("bot")));
-        assertTrue(payload.get("bot").get("position").isNull());
+        assertTrue(payload.get("bot").get("revealed").asBoolean());
+        assertTrue(payload.get("bot").get("position").isObject());
         assertFalse(json.contains("solution"));
     }
 
@@ -93,7 +94,8 @@ class BoardStateDTOTest {
         assertEquals(List.of("position", "value", "correct"),
                 fieldNames(mapper.valueToTree(new Payloads.CellUpdate(new Position(1, 2), 5, true))));
         assertEquals(List.of("secondsRemaining"), fieldNames(mapper.valueToTree(new Payloads.Alert(10))));
-        assertEquals(List.of("elapsedMs", "botRemainingMs"), fieldNames(mapper.valueToTree(new Payloads.Tick(250, null))));
+        assertEquals(List.of("elapsedMs", "botRemainingMs", "reshapeRemainingMs"),
+                fieldNames(mapper.valueToTree(new Payloads.Tick(250, null, null))));
         assertEquals(List.of("won", "finalTimeMs", "reason"),
                 fieldNames(mapper.valueToTree(new Payloads.GameOver(true, 1, "COMPLETED"))));
         assertEquals(List.of("message"), fieldNames(mapper.valueToTree(new Payloads.ErrorMessage("x"))));

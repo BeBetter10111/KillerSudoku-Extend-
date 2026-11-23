@@ -17,6 +17,7 @@ const stats = (strategy: 'NAIVE_ORACLE' | 'OPTIMIZED_MRV_PRUNING') => ({
   avgNodesVisited: 100,
   avgPrunedBranches: strategy === 'NAIVE_ORACLE' ? 0 : 40,
   peakMemoryBytes: 2048,
+  bitmaskOverheadBytes: 0,
 });
 
 const benchmark: BenchmarkResultDTO = {

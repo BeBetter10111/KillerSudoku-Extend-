@@ -10,6 +10,18 @@ import java.util.List;
 import java.util.Random;
 
 public final class OptimizedBacktrackingSolver implements SudokuSolver {
+    private final long maxNodes;
+
+    public OptimizedBacktrackingSolver() {
+        this(Long.MAX_VALUE);
+    }
+
+    public OptimizedBacktrackingSolver(long maxNodes) {
+        if (maxNodes < 1) {
+            throw new IllegalArgumentException("maxNodes must be at least 1: " + maxNodes);
+        }
+        this.maxNodes = maxNodes;
+    }
 
     private static final int SIZE = Board.SIZE;
     private static final int CELL_COUNT = SIZE * SIZE;
@@ -72,7 +84,7 @@ public final class OptimizedBacktrackingSolver implements SudokuSolver {
             throw new IllegalArgumentException("limit must be at least 1: " + limit);
         }
         Outcome outcome = execute(grid, cages, limit, null, null);
-        return new CountResult(outcome.found, true, outcome.metrics);
+        return new CountResult(outcome.found, outcome.completed, outcome.metrics);
     }
 
     @Override
@@ -83,13 +95,13 @@ public final class OptimizedBacktrackingSolver implements SudokuSolver {
     private Outcome execute(int[][] grid, List<Cage> cages, int limit, int[] excluded, Random rng) {
         validateShape(grid);
         ResourceMeter.Reading reading = ResourceMeter.start();
-        Search search = new Search(grid, cages, limit, excluded, rng);
+        Search search = new Search(grid, cages, limit, excluded, rng, maxNodes);
         search.run();
         ResourceMeter.Measurement measurement = ResourceMeter.stop(reading);
         AlgorithmMetrics metrics = new AlgorithmMetrics(SolverStrategyType.OPTIMIZED_MRV_PRUNING,
                 AlgorithmMetrics.SOLVE, measurement.millis(), search.nodes, search.pruned, 0, measurement.bytes(),
                 false);
-        return new Outcome(search.found, search.solutionGrid(), metrics);
+        return new Outcome(search.found, search.completed(), search.solutionGrid(), metrics);
     }
 
     private static SolveResult toSolveResult(Outcome outcome) {
@@ -121,7 +133,7 @@ public final class OptimizedBacktrackingSolver implements SudokuSolver {
         }
     }
 
-    private record Outcome(int found, int[][] solution, AlgorithmMetrics metrics) {
+    private record Outcome(int found, boolean completed, int[][] solution, AlgorithmMetrics metrics) {
     }
 
     private static final class Search {
@@ -139,16 +151,19 @@ public final class OptimizedBacktrackingSolver implements SudokuSolver {
         private final int limit;
         private final int[] excluded;
         private final Random rng;
+        private final long maxNodes;
         private boolean consistent = true;
+        private boolean aborted;
         private long nodes;
         private long pruned;
         private int found;
         private int[] firstSolution;
 
-        Search(int[][] grid, List<Cage> cages, int limit, int[] excluded, Random rng) {
+        Search(int[][] grid, List<Cage> cages, int limit, int[] excluded, Random rng, long maxNodes) {
             this.limit = limit;
             this.excluded = excluded;
             this.rng = rng;
+            this.maxNodes = maxNodes;
             int cageCount = cages == null ? 0 : cages.size();
             cageCells = new int[cageCount][];
             cageUsed = new int[cageCount];
@@ -188,6 +203,10 @@ public final class OptimizedBacktrackingSolver implements SudokuSolver {
             if (consistent) {
                 dfs();
             }
+        }
+
+        boolean completed() {
+            return !aborted;
         }
 
         int[][] solutionGrid() {
@@ -253,6 +272,11 @@ public final class OptimizedBacktrackingSolver implements SudokuSolver {
         private boolean tryValue(int idx, int value) {
             place(idx, value);
             nodes++;
+            if (nodes > maxNodes) {
+                aborted = true;
+                unplace(idx, value);
+                return true;
+            }
             if (!forwardCheck(idx)) {
                 pruned++;
                 unplace(idx, value);

@@ -1,8 +1,5 @@
 package com.killer.sudoku.model;
 
-import lombok.Getter;
-
-@Getter
 public class PlayerHealth {
 
     private final int maxHp;
@@ -25,5 +22,13 @@ public class PlayerHealth {
 
     public boolean isDead() {
         return currentHp <= 0;
+    }
+
+    public int getMaxHp() {
+        return maxHp;
+    }
+
+    public int getCurrentHp() {
+        return currentHp;
     }
 }

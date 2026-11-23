@@ -10,12 +10,22 @@ import com.killer.sudoku.model.SolverStrategyType;
 import com.killer.sudoku.core.GameSession;
 import java.util.Optional;
 import java.util.Random;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class CageReshapeModifier implements GameModifier {
 
+    private static final Logger log = LoggerFactory.getLogger(CageReshapeModifier.class);
+    static final long RETRY_DELAY_MS = 5_000;
+
+    @FunctionalInterface
+    interface Reshaper {
+        CageLayoutResult reshape(Board board, SolverStrategyType strategy, Random rng);
+    }
+
     private final long intervalMs;
     private final long alertMs;
-    private final BacktrackingCageGenerator generator;
+    private final Reshaper reshaper;
     private final SolverStrategyType strategy;
     private final Random rng;
     private long timeUntilReshapeMs;
@@ -28,12 +38,16 @@ public final class CageReshapeModifier implements GameModifier {
 
     public CageReshapeModifier(
             GameBalanceConfig config, BacktrackingCageGenerator generator, SolverStrategyType strategy, Random rng) {
+        this(config, generator::reshapeCages, strategy, rng);
+    }
+
+    CageReshapeModifier(GameBalanceConfig config, Reshaper reshaper, SolverStrategyType strategy, Random rng) {
         if (!config.hasReshape()) {
             throw new IllegalArgumentException("Balance config does not define a reshape interval");
         }
         this.intervalMs = config.reshapeIntervalMs();
         this.alertMs = config.preReshapeAlertMs();
-        this.generator = generator;
+        this.reshaper = reshaper;
         this.strategy = strategy;
         this.rng = rng;
         this.timeUntilReshapeMs = intervalMs;
@@ -76,14 +90,19 @@ public final class CageReshapeModifier implements GameModifier {
 
     private void reshape(GameSession session) {
         Board board = session.getBoard();
-        CageLayoutResult result = generator.reshapeCages(board, strategy, rng);
+        CageLayoutResult result = reshaper.reshape(board, strategy, rng);
         lastMetrics = result.metrics();
-        timeUntilReshapeMs = intervalMs;
-        alertSent = false;
         if (result.cages().equals(board.getCages())) {
+            timeUntilReshapeMs = Math.min(intervalMs, RETRY_DELAY_MS);
+            alertSent = true;
+            log.warn("Session {}: no new unique cage layout found, retrying in {} ms",
+                    session.getSessionId(), timeUntilReshapeMs);
             return;
         }
+        timeUntilReshapeMs = intervalMs;
+        alertSent = false;
         board.replaceCages(result.cages());
+        log.info("Session {}: cage layout reshaped into {} cages", session.getSessionId(), result.cages().size());
         session.notifyCagesReshaped(result.cages(), result.metrics());
     }
 }

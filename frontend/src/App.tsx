@@ -7,6 +7,7 @@ import { AlertBanner } from './components/status/AlertBanner';
 import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePanel';
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
+import { ReshapeTimer } from './components/status/ReshapeTimer';
 import { connectAndStartGame, leaveGame } from './services/socketClient';
 import { useGameStore } from './store/useGameStore';
 import { formatClock } from './utils/formatTime';
@@ -159,6 +160,7 @@ export default function App() {
             <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
               <HealthBar />
               <BotTimer />
+              <ReshapeTimer />
             </div>
             <SudokuBoard />
           </div>
