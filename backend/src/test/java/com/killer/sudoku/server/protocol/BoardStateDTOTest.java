@@ -40,14 +40,14 @@ class BoardStateDTOTest {
     }
 
     @Test
-    void botChallengeSnapshotHidesBotPositionAndExposesHealth() {
+    void botChallengeSnapshotShowsBotPositionAndExposesHealth() {
         GameSession session = started(GameMode.BOT_CHALLENGE, Difficulty.MEDIUM);
         BoardStateDTO dto = BoardStateDTO.from(session);
 
         assertEquals(100, dto.playerHealth().currentHp());
         assertTrue(dto.bot().active());
-        assertFalse(dto.bot().revealed());
-        assertNull(dto.bot().position());
+        assertTrue(dto.bot().revealed());
+        assertTrue(dto.bot().position() != null);
     }
 
     @Test
@@ -84,7 +84,8 @@ class BoardStateDTOTest {
         assertEquals(List.of("maxHp", "currentHp"), fieldNames(payload.get("playerHealth")));
         assertEquals(List.of("active", "revealed", "position", "remainingTimeoutMs", "maxTimeoutMs"),
                 fieldNames(payload.get("bot")));
-        assertTrue(payload.get("bot").get("position").isNull());
+        assertTrue(payload.get("bot").get("revealed").asBoolean());
+        assertTrue(payload.get("bot").get("position").isObject());
         assertFalse(json.contains("solution"));
     }
 

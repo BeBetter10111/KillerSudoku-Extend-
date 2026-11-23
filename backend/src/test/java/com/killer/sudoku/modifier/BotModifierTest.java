@@ -27,18 +27,23 @@ class BotModifierTest {
     }
 
     @Test
-    void onInitSpawnsHiddenBotOnEmptyCellWithoutLeakingPosition() {
-        RecordingSession session = session();
-        BotModifier modifier = newModifier(1);
-        modifier.onInit(session);
+    void onInitRevealsBotForEveryDifficulty() {
+        for (Difficulty difficulty : Difficulty.values()) {
+            GameBalanceConfig config = GameBalanceConfig.forBotChallenge(difficulty);
+            RecordingSession session =
+                    RecordingSession.withPuzzle(difficulty, "bot-test-" + difficulty, config.maxHp());
+            BotModifier modifier =
+                    new BotModifier(config, new WeightedRandomBotStrategy(), new Random(1));
+            modifier.onInit(session);
 
-        BotEntity bot = modifier.getBot().orElseThrow();
-        assertFalse(bot.isRevealed());
-        assertTrue(session.getBoard().getCell(bot.getPosition()).isEmpty());
-        assertEquals(List.of("BOT"), session.types());
-        assertFalse(session.lastBot().revealed());
-        assertEquals(bot.getPosition(), session.lastBot().position());
-        assertTrue(modifier.isActive());
+            BotEntity bot = modifier.getBot().orElseThrow();
+            assertTrue(bot.isRevealed(), difficulty.name());
+            assertTrue(session.getBoard().getCell(bot.getPosition()).isEmpty(), difficulty.name());
+            assertEquals(List.of("BOT"), session.types(), difficulty.name());
+            assertTrue(session.lastBot().revealed(), difficulty.name());
+            assertEquals(bot.getPosition(), session.lastBot().position(), difficulty.name());
+            assertTrue(modifier.isActive(), difficulty.name());
+        }
     }
 
     @Test
@@ -54,7 +59,7 @@ class BotModifierTest {
     }
 
     @Test
-    void correctAnswerElsewhereDoesNothing() {
+    void correctAnswerElsewhereLeavesVisibleBotInPlace() {
         RecordingSession session = session();
         BotModifier modifier = newModifier(2);
         modifier.onInit(session);
@@ -65,7 +70,7 @@ class BotModifierTest {
         modifier.onCorrectAnswer(session, other);
 
         assertEquals(botPosition, modifier.getBot().orElseThrow().getPosition());
-        assertFalse(modifier.getBot().orElseThrow().isRevealed());
+        assertTrue(modifier.getBot().orElseThrow().isRevealed());
         assertEquals(1, session.recorder.events.size());
     }
 
@@ -121,13 +126,15 @@ class BotModifierTest {
     }
 
     @Test
-    void tickDoesNotCountDownWhileBotIsHidden() {
+    void tickCountsDownWhenInitiallyVisible() {
         RecordingSession session = session();
         BotModifier modifier = newModifier(6);
         modifier.onInit(session);
-        modifier.onTick(session, 999_999);
+        modifier.onTick(session, 1_000);
 
         assertEquals(100, session.getPlayerHealth().getCurrentHp());
+        assertEquals(balance.initialBotTimeoutMs() - 1_000,
+                modifier.getBot().orElseThrow().getRemainingTimeoutMs());
         assertEquals(1, session.recorder.events.size());
     }
 
@@ -146,7 +153,7 @@ class BotModifierTest {
     }
 
     @Test
-    void expiredTimeoutDeductsHpAndRespawnsHiddenAtNewCell() {
+    void expiredTimeoutDeductsHpAndShowsBotAtNewCell() {
         RecordingSession session = session();
         BotModifier modifier = newModifier(8);
         modifier.onInit(session);
@@ -158,13 +165,13 @@ class BotModifierTest {
 
         BotEntity bot = modifier.getBot().orElseThrow();
         assertEquals(100 - balance.hpPenalty(), session.getPlayerHealth().getCurrentHp());
-        assertFalse(bot.isRevealed());
+        assertTrue(bot.isRevealed());
         assertNotEquals(timedOutAt, bot.getPosition());
         assertTrue(session.getBoard().getCell(bot.getPosition()).isEmpty());
         assertEquals(balance.initialBotTimeoutMs(), bot.getMaxTimeoutMs());
         assertEquals(100 - balance.hpPenalty(), session.recorder.last("HP").data());
         assertEquals(List.of("BOT", "BOT", "HP", "BOT"), session.types());
-        assertFalse(session.lastBot().revealed());
+        assertTrue(session.lastBot().revealed());
         assertTrue(session.lastBot().active());
         assertTrue(modifier.isActive());
     }
