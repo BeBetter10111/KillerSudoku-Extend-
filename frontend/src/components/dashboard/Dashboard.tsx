@@ -82,10 +82,10 @@ const SOLVER_ENGINES: ReadonlyArray<{
   },
 ];
 
-const BOT_TUNING: Record<Difficulty, { timeoutSeconds: number; hpPenalty: number }> = {
-  EASY: { timeoutSeconds: 45, hpPenalty: 15 },
-  MEDIUM: { timeoutSeconds: 30, hpPenalty: 25 },
-  HARD: { timeoutSeconds: 25, hpPenalty: 30 },
+const BOT_TUNING: Record<Difficulty, { timeoutSeconds: number; hpPressure: number | string }> = {
+  EASY: { timeoutSeconds: 45, hpPressure: 15 },
+  MEDIUM: { timeoutSeconds: 30, hpPressure: 'Random (10 - 25)' },
+  HARD: { timeoutSeconds: 25, hpPressure: 'Random (5 - 30)' },
 };
 
 const PLAYER_NAME_KEY = 'killer-sudoku:player-name';
@@ -95,9 +95,14 @@ export function modifierBadges(mode: GameMode, difficulty: Difficulty): Modifier
   if (mode === 'CLASSIC') {
     return [{ label: 'No modifiers', tone: 'slate' }];
   }
-  const { timeoutSeconds, hpPenalty } = BOT_TUNING[difficulty];
+  const { timeoutSeconds, hpPressure } = BOT_TUNING[difficulty];
   const badges: ModifierBadge[] = [
-    { label: `Bot HP pressure: -${hpPenalty} HP`, tone: 'fuchsia' },
+    {
+      label: typeof hpPressure === 'number'
+        ? `Bot HP pressure: -${hpPressure} HP`
+        : `Bot HP pressure: ${hpPressure} HP`,
+      tone: 'fuchsia',
+    },
     { label: `Bot timer ${timeoutSeconds}s`, tone: 'fuchsia' },
   ];
   if (difficulty === 'HARD') {

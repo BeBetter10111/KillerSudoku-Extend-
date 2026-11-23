@@ -15,7 +15,7 @@ class GameBalanceConfigTest {
         GameBalanceConfig c = GameBalanceConfig.forBotChallenge(Difficulty.EASY);
         assertEquals(100, c.maxHp());
         assertEquals(45_000, c.initialBotTimeoutMs());
-        assertEquals(15, c.hpPenalty());
+        assertEquals(10, c.hpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertFalse(c.hasReshape());
     }
@@ -24,8 +24,8 @@ class GameBalanceConfigTest {
     void mediumPreset() {
         GameBalanceConfig c = GameBalanceConfig.forBotChallenge(Difficulty.MEDIUM);
         assertEquals(100, c.maxHp());
-        assertEquals(30_000, c.initialBotTimeoutMs());
-        assertEquals(25, c.hpPenalty());
+        assertEquals(50_000, c.initialBotTimeoutMs());
+        assertEquals(20, c.hpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertFalse(c.hasReshape());
     }
@@ -34,11 +34,11 @@ class GameBalanceConfigTest {
     void hardPreset() {
         GameBalanceConfig c = GameBalanceConfig.forBotChallenge(Difficulty.HARD);
         assertEquals(100, c.maxHp());
-        assertEquals(25_000, c.initialBotTimeoutMs());
-        assertEquals(30, c.hpPenalty());
+        assertEquals(90_000, c.initialBotTimeoutMs());
+        assertEquals(20, c.hpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertTrue(c.hasReshape());
-        assertEquals(300_000, c.reshapeIntervalMs());
+        assertEquals(180_000, c.reshapeIntervalMs());
         assertEquals(10_000, c.preReshapeAlertMs());
     }
 

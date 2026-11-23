@@ -212,3 +212,4 @@ function ArenaHeader({ onQuit }: { onQuit: () => void }) {
     </header>
   );
 }
+

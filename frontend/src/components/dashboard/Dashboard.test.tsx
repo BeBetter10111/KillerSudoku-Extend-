@@ -37,9 +37,9 @@ describe('modifierBadges', () => {
       'Bot HP pressure: -15 HP',
       'Bot timer 45s',
     ]);
-    expect(modifierBadges('BOT_CHALLENGE', 'MEDIUM')[0].label).toBe('Bot HP pressure: -25 HP');
+    expect(modifierBadges('BOT_CHALLENGE', 'MEDIUM')[0].label).toBe('Bot HP pressure: Random (10 - 25) HP');
     expect(modifierBadges('BOT_CHALLENGE', 'HARD').map((b) => b.label)).toEqual([
-      'Bot HP pressure: -30 HP',
+      'Bot HP pressure: Random (5 - 30) HP',
       'Bot timer 25s',
       'Cage Reshape every 5 min',
     ]);

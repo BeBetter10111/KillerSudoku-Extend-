@@ -21,10 +21,11 @@ cell in red and costs one life in `CLASSIC` (3 lives, the game is lost at 0) or 
 A red cell can be overwritten with another number (a different wrong number costs again; the same one is ignored). Each
 wrong number also adds 5 s to the final time (`GameSession.WRONG_ANSWER_PENALTY_MS`).
 
-**Bot.** The bot is visible from the first second, standing on an empty cell with a 2-minute countdown. Solving its
-cell makes it jump to a new empty cell; each consecutive jump shortens the countdown by 10 % (floor: 5 s). When the
-countdown reaches zero HP is deducted, the bot moves to another empty cell with a fresh 2-minute countdown, and so on.
-It switches off when fewer than 2 empty cells remain or HP reaches 0.
+**Bot.** The bot appears after 2 minutes (`EASY` / `MEDIUM`) or 3 minutes (`HARD`), standing on an empty cell. Its
+countdown is 45 s (`EASY`), 50 s (`MEDIUM`) or 60 s (`HARD`). Solving its cell makes it jump to a new empty cell; each
+consecutive jump shortens the countdown by 10 % (floor: 5 s). When the countdown reaches zero HP is deducted, the bot
+moves to another empty cell with a fresh full countdown, and so on. It switches off when fewer than 2 empty cells remain
+or HP reaches 0. The `TICK` event carries `botSpawnRemainingMs` until the bot has appeared.
 
 **Cage Reshape (`BOT_CHALLENGE` + `HARD` only).** Every 300 000 ms the cages are regrouped (Union-Find + backtracking).
 Filled values are kept and the puzzle is guaranteed to still have a unique solution. An `ALERT_WARNING` is sent 10 s
@@ -177,7 +178,7 @@ backend/src/main/java/com/killer/sudoku
 `GameSession` only knows `GameEventListener`; the WebSocket layer is one implementation of it. New mechanics are
 added as new `GameModifier`s without touching the session.
 
-## Known limitations
+## Limitations
 
 - No authentication: the session id is the only capability, and leaderboard names are unverified.
 - Sessions and the leaderboard live in memory and are lost on restart.
