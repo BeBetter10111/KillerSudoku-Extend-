@@ -36,7 +36,7 @@ public final class BotModifier implements GameModifier {
         }
         Position start = strategy.selectNext(board, null, rng).orElseThrow();
         bot = new BotEntity(start, config.initialBotTimeoutMs());
-        bot.reveal();
+        bot.hide();
         session.notifyBotUpdated(bot);
     }
 
@@ -80,7 +80,7 @@ public final class BotModifier implements GameModifier {
             return;
         }
         Position next = strategy.selectNext(board, bot.getPosition(), rng).orElseThrow();
-        bot.reveal();
+        bot.hide();
         bot.relocate(next, config.initialBotTimeoutMs());
         session.notifyBotUpdated(bot);
     }

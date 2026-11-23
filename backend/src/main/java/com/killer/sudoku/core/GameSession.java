@@ -157,7 +157,6 @@ public class GameSession {
         }
         boolean correct = value == cell.getSolutionValue();
         replayLog.add(new MoveRecord(position, value, timer.getElapsedMs(), correct));
-        cell.place(value);
         if (!correct) {
             penaltyMs += WRONG_ANSWER_PENALTY_MS;
             playerHealth.deductHp(wrongAnswerPenalty);
@@ -168,6 +167,7 @@ public class GameSession {
             }
             return MoveResult.INCORRECT;
         }
+        cell.place(value);
         dispatch(listener -> listener.onCellUpdated(position, value, true));
         for (GameModifier modifier : modifiers) {
             if (modifier.isActive()) {

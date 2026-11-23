@@ -46,7 +46,7 @@ public class GameBeansConfig {
     @Bean
     public BenchmarkService benchmarkService(
             PuzzleGenerator puzzleGenerator, BacktrackingCageGenerator cageGenerator, Clock clock) {
-        return new BenchmarkService(puzzleGenerator, cageGenerator, clock);
+        return new BenchmarkService(puzzleGenerator, clock);
     }
 
     @Bean

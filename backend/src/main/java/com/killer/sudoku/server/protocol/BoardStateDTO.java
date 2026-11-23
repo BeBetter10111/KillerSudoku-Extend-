@@ -60,6 +60,7 @@ public record BoardStateDTO(
             }
             rows.add(line);
         }
+        boolean botChallenge = session.getGameMode() == GameMode.BOT_CHALLENGE;
         return new BoardStateDTO(
                 session.getSessionId(),
                 session.getSeed(),
@@ -68,7 +69,7 @@ public record BoardStateDTO(
                 rows,
                 board.getCages(),
                 board.getEmptyCellsCount(),
-                PlayerHealthDTO.from(session.getPlayerHealth()),
-                session.getBot().map(BotDTO::from).orElse(null));
+                botChallenge ? PlayerHealthDTO.from(session.getPlayerHealth()) : null,
+                botChallenge ? session.getBot().map(BotDTO::from).orElse(null) : null);
     }
 }

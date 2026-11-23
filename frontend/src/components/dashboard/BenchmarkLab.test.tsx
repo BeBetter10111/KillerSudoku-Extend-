@@ -23,6 +23,7 @@ const naive: StrategyBenchmarkStats = {
   avgNodesVisited: 34_322,
   avgPrunedBranches: 0,
   peakMemoryBytes: 23_572 * 1024,
+  bitmaskOverheadBytes: 0,
 };
 
 const optimized: StrategyBenchmarkStats = {
@@ -32,6 +33,7 @@ const optimized: StrategyBenchmarkStats = {
   avgNodesVisited: 311,
   avgPrunedBranches: 187,
   peakMemoryBytes: 3 * 1024,
+  bitmaskOverheadBytes: 0,
 };
 
 const result = (overrides: Partial<BenchmarkResultDTO> = {}): BenchmarkResultDTO => ({

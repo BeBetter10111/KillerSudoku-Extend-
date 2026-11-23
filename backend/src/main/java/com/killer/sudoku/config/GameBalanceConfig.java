@@ -16,7 +16,7 @@ public record GameBalanceConfig(
     public static final int CLASSIC_LIVES = 3;
     public static final int CLASSIC_WRONG_ANSWER_PENALTY = 1;
 
-    private static final long BOT_TIMEOUT_MS = 120_000;
+    private static final long BOT_TIMEOUT_MS = 45_000;
     private static final long MIN_BOT_TIMEOUT_MS = 5_000;
     private static final double TIMEOUT_DECAY = 0.10;
     private static final long NO_RESHAPE = 0;
@@ -39,19 +39,31 @@ public record GameBalanceConfig(
         }
     }
 
+    public GameBalanceConfig(
+            int maxHp,
+            long initialBotTimeoutMs,
+            int hpPenalty,
+            double timeoutDecay,
+            int minBotTimeoutMs,
+            int reshapeIntervalMs,
+            int preReshapeAlertMs) {
+        this(maxHp, initialBotTimeoutMs, hpPenalty, timeoutDecay, minBotTimeoutMs,
+                reshapeIntervalMs, preReshapeAlertMs, 10);
+    }
+
     public static GameBalanceConfig forBotChallenge(Difficulty difficulty) {
         return switch (difficulty) {
             case EASY -> new GameBalanceConfig(
                     100, BOT_TIMEOUT_MS, 15, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, NO_RESHAPE, NO_RESHAPE, 10);
             case MEDIUM -> new GameBalanceConfig(
-                    100, BOT_TIMEOUT_MS, 25, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, NO_RESHAPE, NO_RESHAPE, 15);
+                    100, 30_000, 25, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, NO_RESHAPE, NO_RESHAPE, 10);
             case HARD -> new GameBalanceConfig(
-                    100, BOT_TIMEOUT_MS, 30, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, 300_000, 10_000, 20);
+                    100, 25_000, 30, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, 300_000, 10_000, 10);
         };
     }
 
     public static int startingHp(GameMode mode, Difficulty difficulty) {
-        return mode == GameMode.CLASSIC ? CLASSIC_LIVES : forBotChallenge(difficulty).maxHp();
+        return 100;
     }
 
     public static int wrongAnswerPenalty(GameMode mode, Difficulty difficulty) {

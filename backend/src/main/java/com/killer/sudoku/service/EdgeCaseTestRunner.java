@@ -44,6 +44,24 @@ public class EdgeCaseTestRunner {
     private final GameSessionFactory sessionFactory;
     private final Clock clock;
 
+    public record EdgeCaseResult(
+            int id,
+            String name,
+            String description,
+            boolean passed,
+            double millis,
+            long nodes,
+            String detail) {
+    }
+
+    public record EdgeCaseReport(
+            int total,
+            int passed,
+            boolean allPassed,
+            List<EdgeCaseResult> results,
+            long timestampMs) {
+    }
+
     public EdgeCaseTestRunner(
             PuzzleGenerator puzzleGenerator,
             BacktrackingCageGenerator cageGenerator,
@@ -214,7 +232,7 @@ public class EdgeCaseTestRunner {
     private Outcome pureZeroGiven(long[] nodes) {
         Random rng = new Random(ZERO_GIVEN_SEED.hashCode());
         int[][] solution = new OptimizedBacktrackingSolver().solve(new int[SIZE][SIZE], List.of(), rng).solution();
-        List<Cage> cages = cageGenerator.generateCages(3, solution, Difficulty.EASY, rng);
+        List<Cage> cages = cageGenerator.generateCages(solution, Difficulty.EASY, rng);
         int[][] empty = new int[SIZE][SIZE];
         SudokuSolver.SolveResult fast = new OptimizedBacktrackingSolver(ZERO_GIVEN_OPTIMIZED_BUDGET).solve(empty, cages);
         SudokuSolver.SolveResult oracle = new NaiveBacktrackingSolver(ZERO_GIVEN_NAIVE_BUDGET).solve(empty, cages);
