@@ -12,8 +12,7 @@ public record GameBalanceConfig(
         long reshapeIntervalMs,
         long preReshapeAlertMs,
         int wrongAnswerHpPenalty,
-        long firstBotTimeoutMs,
-        int minHpPenalty) {
+        long firstBotTimeoutMs) {
 
     public static final int CLASSIC_LIVES = 3;
     public static final int CLASSIC_WRONG_ANSWER_PENALTY = 1;
@@ -28,12 +27,8 @@ public record GameBalanceConfig(
     private static final long NO_RESHAPE = 0;
 
     public GameBalanceConfig {
-        if (maxHp <= 0 || hpPenalty <= 0 || minHpPenalty <= 0
-                || wrongAnswerHpPenalty <= 0 || initialBotTimeoutMs <= 0 || minBotTimeoutMs <= 0) {
+        if (maxHp <= 0 || hpPenalty <= 0 || wrongAnswerHpPenalty <= 0 || initialBotTimeoutMs <= 0 || minBotTimeoutMs <= 0) {
             throw new IllegalArgumentException("HP, penalty and timeouts must be positive");
-        }
-        if (minHpPenalty > hpPenalty) {
-            throw new IllegalArgumentException("minHpPenalty must not exceed hpPenalty");
         }
         if (minBotTimeoutMs > initialBotTimeoutMs) {
             throw new IllegalArgumentException("minBotTimeoutMs must not exceed initialBotTimeoutMs");
@@ -60,23 +55,9 @@ public record GameBalanceConfig(
             long minBotTimeoutMs,
             long reshapeIntervalMs,
             long preReshapeAlertMs,
-            int wrongAnswerHpPenalty,
-            long firstBotTimeoutMs) {
-        this(maxHp, initialBotTimeoutMs, hpPenalty, timeoutDecay, minBotTimeoutMs,
-                reshapeIntervalMs, preReshapeAlertMs, wrongAnswerHpPenalty, firstBotTimeoutMs, hpPenalty);
-    }
-
-    public GameBalanceConfig(
-            int maxHp,
-            long initialBotTimeoutMs,
-            int hpPenalty,
-            double timeoutDecay,
-            long minBotTimeoutMs,
-            long reshapeIntervalMs,
-            long preReshapeAlertMs,
             int wrongAnswerHpPenalty) {
         this(maxHp, initialBotTimeoutMs, hpPenalty, timeoutDecay, minBotTimeoutMs,
-                reshapeIntervalMs, preReshapeAlertMs, wrongAnswerHpPenalty, initialBotTimeoutMs, hpPenalty);
+                reshapeIntervalMs, preReshapeAlertMs, wrongAnswerHpPenalty, initialBotTimeoutMs);
     }
 
     public GameBalanceConfig(
@@ -88,20 +69,20 @@ public record GameBalanceConfig(
             int reshapeIntervalMs,
             int preReshapeAlertMs) {
         this(maxHp, initialBotTimeoutMs, hpPenalty, timeoutDecay, minBotTimeoutMs,
-                reshapeIntervalMs, preReshapeAlertMs, 10, initialBotTimeoutMs, hpPenalty);
+                reshapeIntervalMs, preReshapeAlertMs, 10);
     }
 
     public static GameBalanceConfig forBotChallenge(Difficulty difficulty) {
         return switch (difficulty) {
             case EASY -> new GameBalanceConfig(
                     100, EASY_BOT_TIMEOUT_MS, 15, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, NO_RESHAPE, NO_RESHAPE, 10,
-                    EASY_MEDIUM_FIRST_BOT_TIMEOUT_MS, 15);
+                    EASY_MEDIUM_FIRST_BOT_TIMEOUT_MS);
             case MEDIUM -> new GameBalanceConfig(
                     100, MEDIUM_BOT_TIMEOUT_MS, 25, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, NO_RESHAPE, NO_RESHAPE, 10,
-                    EASY_MEDIUM_FIRST_BOT_TIMEOUT_MS, 10);
+                    EASY_MEDIUM_FIRST_BOT_TIMEOUT_MS);
             case HARD -> new GameBalanceConfig(
                     100, HARD_BOT_TIMEOUT_MS, 30, TIMEOUT_DECAY, MIN_BOT_TIMEOUT_MS, 300_000, 10_000, 10,
-                    HARD_FIRST_BOT_TIMEOUT_MS, 5);
+                    HARD_FIRST_BOT_TIMEOUT_MS);
         };
     }
 
@@ -121,7 +102,7 @@ public record GameBalanceConfig(
         }
         long alertMs = Math.min(preReshapeAlertMs, Math.max(1, intervalMs / 3));
         return new GameBalanceConfig(maxHp, initialBotTimeoutMs, hpPenalty, timeoutDecay, minBotTimeoutMs,
-                intervalMs, alertMs, wrongAnswerHpPenalty, firstBotTimeoutMs, minHpPenalty);
+                intervalMs, alertMs, wrongAnswerHpPenalty, firstBotTimeoutMs);
     }
 
     public boolean hasReshape() {

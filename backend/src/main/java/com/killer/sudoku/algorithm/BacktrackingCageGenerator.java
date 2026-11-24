@@ -24,6 +24,8 @@ public final class BacktrackingCageGenerator {
     private static final int MAX_PARTITION_ATTEMPTS = 50;
     private static final int MAX_RESHAPE_ATTEMPTS = 30;
     private static final int MIN_KNOWN_CELLS_FOR_RESHAPE = 10;
+    private static final int MIN_SINGLE_CELL_CAGES = 3;
+    private static final int MAX_SINGLE_CELL_CAGES = 5;
     private static final Difficulty RESHAPE_DIFFICULTY = Difficulty.MEDIUM;
 
     private static final int[][] DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
@@ -79,13 +81,15 @@ public final class BacktrackingCageGenerator {
         SudokuSolver solver = SolverFactory.forStrategy(strategy);
         AlgorithmMetrics total = AlgorithmMetrics.empty(strategy, AlgorithmMetrics.CAGE_RESHAPE);
         if (CELL_COUNT - currentBoard.getEmptyCellsCount() < MIN_KNOWN_CELLS_FOR_RESHAPE) {
-            return new CageLayoutResult(currentBoard.getCages(), total);
+            return generateCagesWithMetrics(solution, RESHAPE_DIFFICULTY, strategy, rng);
         }
+        CageLayoutResult last = null;
         double millis = 0;
         long bytes = 0;
         for (int attempt = 0; attempt < MAX_RESHAPE_ATTEMPTS; attempt++) {
             ResourceMeter.Reading reading = ResourceMeter.start();
             CageLayoutResult layout = generateCagesWithMetrics(solution, RESHAPE_DIFFICULTY, strategy, rng);
+            last = layout;
             SudokuSolver.CountResult uniqueness = solver.countSolutions(known, layout.cages(), 2);
             ResourceMeter.Measurement measurement = ResourceMeter.stop(reading);
             total = total.plus(layout.metrics()).plus(uniqueness.metrics());
@@ -101,7 +105,63 @@ public final class BacktrackingCageGenerator {
             return new CageLayoutResult(layout.cages(),
                     total.withTiming(millis, bytes).withOracleVerified(verdict == OracleVerdict.AGREES));
         }
-        return new CageLayoutResult(currentBoard.getCages(), total.withTiming(millis, bytes));
+        return new CageLayoutResult(last.cages(), total.withTiming(millis, bytes));
+    }
+
+    public static List<Cage> withSingleCellCages(List<Cage> cages, int[][] solution, Random rng) {
+        int wanted = MIN_SINGLE_CELL_CAGES + rng.nextInt(MAX_SINGLE_CELL_CAGES - MIN_SINGLE_CELL_CAGES + 1);
+        List<List<Position>> groups = new ArrayList<>();
+        for (Cage cage : cages) {
+            groups.add(new ArrayList<>(cage.cells()));
+        }
+        List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < groups.size(); i++) {
+            order.add(i);
+        }
+        java.util.Collections.shuffle(order, rng);
+        List<Position> singles = new ArrayList<>();
+        for (int index : order) {
+            List<Position> group = groups.get(index);
+            if (singles.size() >= wanted || group.size() < 3) {
+                continue;
+            }
+            for (Position candidate : group) {
+                List<Position> rest = new ArrayList<>(group);
+                rest.remove(candidate);
+                if (isConnected(rest)) {
+                    group.remove(candidate);
+                    singles.add(candidate);
+                    break;
+                }
+            }
+        }
+        List<Cage> result = new ArrayList<>();
+        int id = 0;
+        for (List<Position> group : groups) {
+            int sum = 0;
+            for (Position p : group) {
+                sum += solution[p.row()][p.col()];
+            }
+            result.add(new Cage(id++, group, sum));
+        }
+        for (Position p : singles) {
+            result.add(new Cage(id++, List.of(p), solution[p.row()][p.col()]));
+        }
+        return result;
+    }
+
+    private static boolean isConnected(List<Position> cells) {
+        List<Position> seen = new ArrayList<>();
+        seen.add(cells.get(0));
+        for (int i = 0; i < seen.size(); i++) {
+            for (Position other : cells) {
+                if (!seen.contains(other)
+                        && Math.abs(other.row() - seen.get(i).row()) + Math.abs(other.col() - seen.get(i).col()) == 1) {
+                    seen.add(other);
+                }
+            }
+        }
+        return seen.size() == cells.size();
     }
 
     private static OracleVerdict verifyWithOracle(SolverStrategyType strategy, int[][] known, List<Cage> cages) {

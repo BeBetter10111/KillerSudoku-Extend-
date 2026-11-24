@@ -18,7 +18,6 @@ class GameBalanceConfigTest {
         assertEquals(45_000, c.initialBotTimeoutMs());
         assertEquals(120_000, c.firstBotTimeoutMs());
         assertEquals(15, c.hpPenalty());
-        assertEquals(15, c.minHpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertFalse(c.hasReshape());
     }
@@ -30,7 +29,6 @@ class GameBalanceConfigTest {
         assertEquals(50_000, c.initialBotTimeoutMs());
         assertEquals(120_000, c.firstBotTimeoutMs());
         assertEquals(25, c.hpPenalty());
-        assertEquals(10, c.minHpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertFalse(c.hasReshape());
     }
@@ -42,7 +40,6 @@ class GameBalanceConfigTest {
         assertEquals(60_000, c.initialBotTimeoutMs());
         assertEquals(180_000, c.firstBotTimeoutMs());
         assertEquals(30, c.hpPenalty());
-        assertEquals(5, c.minHpPenalty());
         assertEquals(0.10, c.timeoutDecay());
         assertTrue(c.hasReshape());
         assertEquals(300_000, c.reshapeIntervalMs());
@@ -61,7 +58,5 @@ class GameBalanceConfigTest {
         assertThrows(IllegalArgumentException.class, () -> new GameBalanceConfig(100, 1000, 1, 1.0, 500, 0, 0));
         assertThrows(IllegalArgumentException.class, () -> new GameBalanceConfig(100, 1000, 1, 0.1, 2000, 0, 0));
         assertThrows(IllegalArgumentException.class, () -> new GameBalanceConfig(100, 1000, 1, 0.1, 500, 5000, 5000));
-        assertThrows(IllegalArgumentException.class,
-                () -> new GameBalanceConfig(100, 1000, 5, 0.1, 500, 0, 0, 10, 1000, 6));
     }
 }

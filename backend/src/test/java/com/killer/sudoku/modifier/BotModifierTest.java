@@ -165,8 +165,7 @@ class BotModifierTest {
         modifier.onTick(session, balance.initialBotTimeoutMs());
 
         BotEntity bot = modifier.getBot().orElseThrow();
-        int hpPenalty = 100 - session.getPlayerHealth().getCurrentHp();
-        assertEquals(balance.hpPenalty(), hpPenalty);
+        assertEquals(100 - balance.hpPenalty(), session.getPlayerHealth().getCurrentHp());
         assertTrue(bot.isRevealed());
         assertNotEquals(timedOutAt, bot.getPosition());
         assertTrue(session.getBoard().getCell(bot.getPosition()).isEmpty());
@@ -176,34 +175,6 @@ class BotModifierTest {
         assertTrue(session.lastBot().revealed());
         assertTrue(session.lastBot().active());
         assertTrue(modifier.isActive());
-    }
-
-    @Test
-    void mediumAndHardTimeoutPressureIsRandomWithinConfiguredRange() {
-        for (Difficulty difficulty : List.of(Difficulty.MEDIUM, Difficulty.HARD)) {
-            GameBalanceConfig config = GameBalanceConfig.forBotChallenge(difficulty);
-            int firstPenalty = -1;
-            boolean sawDifferentPenalty = false;
-            for (int seed = 0; seed < 50; seed++) {
-                RecordingSession session = RecordingSession.withPuzzle(difficulty, "pressure-" + seed, config.maxHp());
-                BotModifier modifier =
-                        new BotModifier(config, new WeightedRandomBotStrategy(), new Random(seed));
-                modifier.onInit(session);
-                Position at = modifier.getBot().orElseThrow().getPosition();
-                session.solve(at);
-                modifier.onCorrectAnswer(session, at);
-                modifier.onTick(session, config.initialBotTimeoutMs());
-
-                int penalty = config.maxHp() - session.getPlayerHealth().getCurrentHp();
-                assertTrue(penalty >= config.minHpPenalty() && penalty <= config.hpPenalty());
-                if (firstPenalty < 0) {
-                    firstPenalty = penalty;
-                } else if (penalty != firstPenalty) {
-                    sawDifferentPenalty = true;
-                }
-            }
-            assertTrue(sawDifferentPenalty, difficulty.name());
-        }
     }
 
     @Test
