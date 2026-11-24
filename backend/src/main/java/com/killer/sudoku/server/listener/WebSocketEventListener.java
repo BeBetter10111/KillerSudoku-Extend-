@@ -63,7 +63,12 @@ public final class WebSocketEventListener implements GameEventListener {
 
     @Override
     public void onTick(long elapsedMs, Long botRemainingMs, Long reshapeRemainingMs) {
-        send(GameEventType.TICK, new Payloads.Tick(elapsedMs, botRemainingMs, reshapeRemainingMs));
+        onTick(elapsedMs, botRemainingMs, reshapeRemainingMs, null);
+    }
+
+    @Override
+    public void onTick(long elapsedMs, Long botRemainingMs, Long reshapeRemainingMs, Long botSpawnRemainingMs) {
+        send(GameEventType.TICK, new Payloads.Tick(elapsedMs, botRemainingMs, reshapeRemainingMs, botSpawnRemainingMs));
     }
 
     @Override

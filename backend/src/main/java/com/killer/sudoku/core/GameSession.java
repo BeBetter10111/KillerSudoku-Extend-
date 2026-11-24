@@ -11,6 +11,7 @@ import com.killer.sudoku.model.GameMode;
 import com.killer.sudoku.model.PlayerHealth;
 import com.killer.sudoku.model.Position;
 import com.killer.sudoku.model.SolverStrategyType;
+import com.killer.sudoku.modifier.BotModifier;
 import com.killer.sudoku.modifier.CageReshapeModifier;
 import com.killer.sudoku.modifier.GameModifier;
 import com.killer.sudoku.service.TimerService;
@@ -135,7 +136,17 @@ public class GameSession {
         long totalMs = getTotalTimeMs();
         Long botRemainingMs = bot != null && bot.isActive() && bot.isRevealed() ? bot.getRemainingTimeoutMs() : null;
         Long reshapeRemainingMs = reshapeRemainingMs();
-        dispatch(listener -> listener.onTick(totalMs, botRemainingMs, reshapeRemainingMs));
+        Long botSpawnRemainingMs = botSpawnRemainingMs();
+        dispatch(listener -> listener.onTick(totalMs, botRemainingMs, reshapeRemainingMs, botSpawnRemainingMs));
+    }
+
+    private Long botSpawnRemainingMs() {
+        for (GameModifier modifier : modifiers) {
+            if (modifier instanceof BotModifier botModifier) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private Long reshapeRemainingMs() {

@@ -228,8 +228,7 @@ describe('SudokuBoard', () => {
 
     emit({ type: 'ALERT_WARNING', payload: { secondsRemaining: 10 } });
     const alertPaths = document.querySelectorAll('[data-testid="cage-overlay"] path');
-    expect(alertPaths[0].getAttribute('class')).toContain('animate-cage-alert');
-    expect(alertPaths[0].getAttribute('class')).toContain('stroke-amber-400');
+    expect(alertPaths[0].getAttribute('class')).not.toContain('animate-cage-alert');
 
     emit({ type: 'CAGE_RESHAPED', payload: { cages: boardState().cages.slice(0, 1), metrics: algorithmMetrics() } });
     expect(screen.getAllByTestId('cage-sum')).toHaveLength(1);

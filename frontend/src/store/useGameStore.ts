@@ -40,6 +40,7 @@ export interface GameState {
   botRemainingMs: number | null;
   reshapeRemainingMs: number | null;
   botMaxMs: number | null;
+  botSpawnRemainingMs: number | null;
   isReshapeAlertActive: boolean;
   reshapeAlertTicksLeft: number;
   elapsedMs: number;
@@ -84,6 +85,7 @@ const createInitialState = (): GameState => ({
   botRemainingMs: null,
   reshapeRemainingMs: null,
   botMaxMs: null,
+  botSpawnRemainingMs: null,
   isReshapeAlertActive: false,
   reshapeAlertTicksLeft: 0,
   elapsedMs: 0,
@@ -196,6 +198,7 @@ function applyServerEvent(state: GameState, event: GameEventMessage): Partial<Ga
         elapsedMs: event.payload.elapsedMs,
         botRemainingMs: event.payload.botRemainingMs,
         reshapeRemainingMs: event.payload.reshapeRemainingMs ?? null,
+        botSpawnRemainingMs: event.payload.botSpawnRemainingMs ?? null,
         reshapeAlertTicksLeft: ticksLeft,
         isReshapeAlertActive: state.isReshapeAlertActive && ticksLeft > 0,
       };
@@ -208,6 +211,7 @@ function applyServerEvent(state: GameState, event: GameEventMessage): Partial<Ga
         elapsedMs: event.payload.finalTimeMs,
         isReshapeAlertActive: false,
         reshapeAlertTicksLeft: 0,
+        botSpawnRemainingMs: null,
         ...NO_BOT,
       };
     case 'ERROR':

@@ -1,6 +1,7 @@
-import { Bot } from 'lucide-react';
+import { Bot, Clock3 } from 'lucide-react';
 import { useLocalCountdown } from '../../hooks/useLocalCountdown';
 import { useGameStore } from '../../store/useGameStore';
+import { formatClock } from '../../utils/formatTime';
 
 function fillFor(ratio: number): string {
   if (ratio > 0.5) {
@@ -13,9 +14,31 @@ export function BotTimer() {
   const botPosition = useGameStore((state) => state.botPosition);
   const botRemainingMs = useGameStore((state) => state.botRemainingMs);
   const botMaxMs = useGameStore((state) => state.botMaxMs);
+  const botSpawnRemainingMs = useGameStore((state) => state.botSpawnRemainingMs);
   const remainingMs = useLocalCountdown(botPosition !== null ? botRemainingMs : null);
+  const spawnRemainingMs = useLocalCountdown(botPosition === null ? botSpawnRemainingMs : null);
 
-  if (botPosition === null || remainingMs === null || botMaxMs === null || botMaxMs <= 0) {
+  if (botPosition === null) {
+    if (spawnRemainingMs === null) {
+      return null;
+    }
+    return (
+      <div
+        data-testid="bot-spawn-timer"
+        className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2"
+      >
+        <div className="flex items-center justify-between text-sm font-semibold">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <Clock3 className="h-4 w-4" aria-hidden="true" />
+            Bot arrives in
+          </span>
+          <span className="tabular-nums text-slate-200">{formatClock(spawnRemainingMs)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (remainingMs === null || botMaxMs === null || botMaxMs <= 0) {
     return null;
   }
 

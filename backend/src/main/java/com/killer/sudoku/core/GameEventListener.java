@@ -23,5 +23,9 @@ public interface GameEventListener {
 
     void onTick(long elapsedMs, Long botRemainingMs, Long reshapeRemainingMs);
 
+    default void onTick(long elapsedMs, Long botRemainingMs, Long reshapeRemainingMs, Long botSpawnRemainingMs) {
+        onTick(elapsedMs, botRemainingMs, reshapeRemainingMs);
+    }
+
     void onGameOver(boolean won, long finalTimeMs, String reason);
 }

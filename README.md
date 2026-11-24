@@ -21,10 +21,13 @@ cell in red and costs one life in `CLASSIC` (3 lives, the game is lost at 0) or 
 A red cell can be overwritten with another number (a different wrong number costs again; the same one is ignored). Each
 wrong number also adds 5 s to the final time (`GameSession.WRONG_ANSWER_PENALTY_MS`).
 
-**Bot.** The bot is visible from the first second, standing on an empty cell with a 2-minute countdown. Solving its
-cell makes it jump to a new empty cell; each consecutive jump shortens the countdown by 10 % (floor: 5 s). When the
-countdown reaches zero HP is deducted, the bot moves to another empty cell with a fresh 2-minute countdown, and so on.
-It switches off when fewer than 2 empty cells remain or HP reaches 0.
+**Bot.** The bot is visible from the first second, standing on an empty cell. Its first countdown is 2 minutes (`EASY` /
+`MEDIUM`) or 3 minutes (`HARD`); every countdown after that is 45 s (`EASY`), 50 s (`MEDIUM`) or 60 s (`HARD`). Solving
+its cell makes it jump to a new empty cell; each consecutive jump shortens the countdown by 10 % (floor: 5 s). When the
+countdown reaches zero HP is deducted and the bot moves to another empty cell. It switches off when fewer than 2 empty
+cells remain or HP reaches 0.
+
+**Hard board.** In every mode `HARD` starts with no given numbers; the player solves from the cages alone.
 
 **Cage Reshape (`BOT_CHALLENGE` + `HARD` only).** Every 300 000 ms the cages are regrouped (Union-Find + backtracking).
 Filled values are kept and the puzzle is guaranteed to still have a unique solution. An `ALERT_WARNING` is sent 10 s

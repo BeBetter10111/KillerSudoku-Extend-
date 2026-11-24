@@ -28,10 +28,11 @@ class BoardStateDTOTest {
     }
 
     @Test
-    void classicSnapshotHasNoHealthOrBot() {
+    void classicSnapshotHasThreeLivesAndNoBot() {
         BoardStateDTO dto = BoardStateDTO.from(started(GameMode.CLASSIC, Difficulty.EASY));
 
-        assertNull(dto.playerHealth());
+        assertEquals(3, dto.playerHealth().maxHp());
+        assertEquals(3, dto.playerHealth().currentHp());
         assertNull(dto.bot());
         assertEquals(9, dto.cells().size());
         assertEquals(9, dto.cells().get(0).size());
