@@ -71,10 +71,7 @@ public final class BotModifier implements GameModifier {
             return;
         }
         PlayerHealth health = session.getPlayerHealth();
-        int hpPenalty = config.minHpPenalty() == config.hpPenalty()
-                ? config.hpPenalty()
-                : rng.nextInt(config.hpPenalty() - config.minHpPenalty() + 1) + config.minHpPenalty();
-        health.deductHp(hpPenalty);
+        health.deductHp(config.hpPenalty());
         consecutiveReveals = 0;
         session.notifyHpUpdated();
         Board board = session.getBoard();

@@ -38,7 +38,18 @@ public final class CageReshapeModifier implements GameModifier {
 
     public CageReshapeModifier(
             GameBalanceConfig config, BacktrackingCageGenerator generator, SolverStrategyType strategy, Random rng) {
-        this(config, generator::reshapeCages, strategy, rng);
+        this(config, (board, s, r) -> withSingleCells(generator.reshapeCages(board, s, r), board, r), strategy, rng);
+    }
+
+    private static CageLayoutResult withSingleCells(CageLayoutResult result, Board board, Random rng) {
+        int[][] solution = new int[Board.SIZE][Board.SIZE];
+        for (int row = 0; row < Board.SIZE; row++) {
+            for (int col = 0; col < Board.SIZE; col++) {
+                solution[row][col] = board.getCell(row, col).getSolutionValue();
+            }
+        }
+        return new CageLayoutResult(
+                BacktrackingCageGenerator.withSingleCellCages(result.cages(), solution, rng), result.metrics());
     }
 
     CageReshapeModifier(GameBalanceConfig config, Reshaper reshaper, SolverStrategyType strategy, Random rng) {

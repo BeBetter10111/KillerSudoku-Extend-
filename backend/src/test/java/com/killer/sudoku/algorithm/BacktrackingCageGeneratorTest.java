@@ -84,6 +84,17 @@ class BacktrackingCageGeneratorTest {
         assertTrue(java.util.Arrays.deepEquals(valuesBefore, currentValues(board)));
     }
 
+    @Test
+    void withSingleCellCagesAddsThreeToFiveSingleCellCages() {
+        int[][] solution = solver.solve(new int[9][9], List.of(), new Random(3)).solution();
+        List<Cage> cages = generator.generateCages(solution, Difficulty.HARD, new Random(3));
+        List<Cage> result = BacktrackingCageGenerator.withSingleCellCages(cages, solution, new Random(4));
+
+        long singles = result.stream().filter(cage -> cage.size() == 1).count();
+        assertTrue(singles >= 3 && singles <= 5, "single-cell cages: " + singles);
+        assertEquals(81, result.stream().mapToInt(Cage::size).sum());
+    }
+
     private static int[][] currentValues(Board board) {
         int[][] values = new int[9][9];
         for (int row = 0; row < 9; row++) {
