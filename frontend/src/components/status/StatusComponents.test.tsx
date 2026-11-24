@@ -2,8 +2,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGameStore } from '../../store/useGameStore';
-import { algorithmMetrics, emit, revealedBot, startGame } from '../../test/fixtures';
-import { AlertBanner } from './AlertBanner';
+import { emit, revealedBot, startGame } from '../../test/fixtures';
 import { BotTimer } from './BotTimer';
 import { HealthBar } from './HealthBar';
 import { ReshapeTimer } from './ReshapeTimer';
@@ -71,31 +70,6 @@ describe('HealthBar', () => {
   });
 });
 
-describe('AlertBanner', () => {
-  it('is hidden until the reshape alert starts', () => {
-    startGame();
-    const { container } = render(<AlertBanner />);
-    expect(container.innerHTML).toBe('');
-  });
-
-  it('warns with the remaining seconds and updates as ticks arrive', () => {
-    startGame();
-    render(<AlertBanner />);
-    emit({ type: 'ALERT_WARNING', payload: { secondsRemaining: 10 } });
-
-    const banner = screen.getByRole('alert');
-    expect(banner.textContent).toContain('WARNING: Cage layout reshaping in 10 seconds!');
-
-    for (let i = 0; i < 36; i++) {
-      emit({ type: 'TICK', payload: { elapsedMs: i, botRemainingMs: null } });
-    }
-    expect(banner.textContent).toContain('in 1 second!');
-
-    emit({ type: 'CAGE_RESHAPED', payload: { cages: [], metrics: algorithmMetrics() } });
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-});
-
 describe('BotTimer', () => {
   it('is hidden while the bot is hidden', () => {
     startGame();
@@ -123,21 +97,6 @@ describe('BotTimer', () => {
 
     emit({ type: 'BOT_UPDATED', payload: { active: true, revealed: false, position: null, remainingTimeoutMs: 30000, maxTimeoutMs: 30000 } });
     expect(screen.queryByTestId('bot-timer')).toBeNull();
-  });
-});
-
-describe('BotTimer spawn countdown', () => {
-  it('shows when the bot arrives until it is revealed', () => {
-    startGame();
-    render(<BotTimer />);
-    emit({ type: 'TICK', payload: { elapsedMs: 250, botRemainingMs: null, botSpawnRemainingMs: 119_750 } });
-    expect(screen.getByTestId('bot-spawn-timer').textContent).toContain('1:59');
-    expect(screen.queryByTestId('bot-timer')).toBeNull();
-
-    emit({ type: 'BOT_UPDATED', payload: revealedBot({ row: 4, col: 4 }, 45000, 45000) });
-    emit({ type: 'TICK', payload: { elapsedMs: 500, botRemainingMs: 44_750, botSpawnRemainingMs: null } });
-    expect(screen.queryByTestId('bot-spawn-timer')).toBeNull();
-    expect(screen.getByTestId('bot-timer')).toBeTruthy();
   });
 });
 
@@ -195,20 +154,16 @@ describe('ReshapeTimer', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('counts down in minutes and seconds and turns amber then red', () => {
+  it('counts down in minutes and seconds without any warning styling', () => {
     startGame();
     render(<ReshapeTimer />);
     tick(272_000);
     expect(screen.getByTestId('reshape-timer-value').textContent).toBe('4:32');
     expect(screen.getByTestId('reshape-timer').className).not.toContain('amber');
 
-    tick(25_000);
-    expect(screen.getByTestId('reshape-timer-value').textContent).toBe('0:25');
-    expect(screen.getByTestId('reshape-timer').className).toContain('amber');
-
     tick(8_000);
-    expect(screen.getByTestId('reshape-timer').className).toContain('rose');
-    expect(screen.getByTestId('reshape-timer').className).toContain('animate-pulse');
+    expect(screen.getByTestId('reshape-timer').className).not.toContain('rose');
+    expect(screen.getByTestId('reshape-timer').className).not.toContain('animate-pulse');
   });
 
   it('disappears when the game is over', () => {

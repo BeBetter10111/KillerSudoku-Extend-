@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dashboard, type GameSetup } from './components/dashboard/Dashboard';
 import { SudokuBoard } from './components/board/SudokuBoard';
 import { ResultModal } from './components/game/ResultModal';
-import { AlertBanner } from './components/status/AlertBanner';
 import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePanel';
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
@@ -154,7 +153,6 @@ export default function App() {
             </button>
           </div>
         )}
-        <AlertBanner />
         <div className="flex w-full flex-col items-center gap-3 lg:flex-row lg:items-start lg:justify-center">
           <div className="flex w-full max-w-3xl flex-col items-center gap-3">
             <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">

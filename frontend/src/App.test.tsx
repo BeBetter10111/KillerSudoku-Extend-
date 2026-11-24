@@ -64,7 +64,7 @@ describe('App', () => {
     expect(screen.getByTestId('bot-timer')).toBeTruthy();
 
     emit({ type: 'ALERT_WARNING', payload: { secondsRemaining: 10 } });
-    expect(screen.getByRole('alert').textContent).toContain('reshaping in 10 seconds');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('hides survival HUD in classic mode', () => {
