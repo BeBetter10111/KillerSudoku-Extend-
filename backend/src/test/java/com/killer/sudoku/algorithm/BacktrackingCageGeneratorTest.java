@@ -3,11 +3,13 @@ package com.killer.sudoku.algorithm;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.killer.sudoku.model.AlgorithmMetrics;
 import com.killer.sudoku.model.Board;
 import com.killer.sudoku.model.Cage;
 import com.killer.sudoku.model.Cell;
 import com.killer.sudoku.model.Difficulty;
 import com.killer.sudoku.model.Position;
+import com.killer.sudoku.model.SolverStrategyType;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
@@ -21,8 +23,8 @@ class BacktrackingCageGeneratorTest {
     private static final String SOLUTION =
             "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
 
-    private final SudokuSolver solver = new SudokuSolver();
-    private final BacktrackingCageGenerator generator = new BacktrackingCageGenerator(solver);
+    private final SudokuSolver solver = SolverFactory.forStrategy(SolverStrategyType.OPTIMIZED_MRV_PRUNING);
+    private final BacktrackingCageGenerator generator = new BacktrackingCageGenerator();
 
     @Test
     void producesValidPartitionForEveryDifficulty() {
@@ -56,7 +58,7 @@ class BacktrackingCageGeneratorTest {
 
     @Test
     void reshapeKeepsValuesAndPreservesUniqueSolution() {
-        PuzzleGenerator puzzleGenerator = new PuzzleGenerator(solver, generator);
+        PuzzleGenerator puzzleGenerator = new PuzzleGenerator(generator);
         Board board = puzzleGenerator.generate(Difficulty.HARD, "reshape-test");
         List<Position> empty = board.getEmptyCells();
         for (int i = 0; i < empty.size() / 2; i++) {
@@ -80,6 +82,17 @@ class BacktrackingCageGeneratorTest {
         board.replaceCages(reshaped);
         assertEquals(valuesBefore.length, currentValues(board).length);
         assertTrue(java.util.Arrays.deepEquals(valuesBefore, currentValues(board)));
+    }
+
+    @Test
+    void withSingleCellCagesAddsThreeToFiveSingleCellCages() {
+        int[][] solution = solver.solve(new int[9][9], List.of(), new Random(3)).solution();
+        List<Cage> cages = generator.generateCages(solution, Difficulty.HARD, new Random(3));
+        List<Cage> result = BacktrackingCageGenerator.withSingleCellCages(cages, solution, new Random(4));
+
+        long singles = result.stream().filter(cage -> cage.size() == 1).count();
+        assertTrue(singles >= 3 && singles <= 5, "single-cell cages: " + singles);
+        assertEquals(81, result.stream().mapToInt(Cage::size).sum());
     }
 
     private static int[][] currentValues(Board board) {
@@ -131,5 +144,62 @@ class BacktrackingCageGeneratorTest {
             }
         }
         return seen.size() == members.size();
+    }
+
+    @Test
+    void generationMetricsCountUnionFindOperations() {
+        int[][] solution = SudokuSolverTest.parse(SOLUTION);
+        CageLayoutResult result = generator.generateCagesWithMetrics(
+                solution, Difficulty.MEDIUM, SolverStrategyType.OPTIMIZED_MRV_PRUNING, new Random(1));
+        assertValidPartition(solution, result.cages());
+        assertTrue(result.metrics().unionFindOps() >= 81);
+        assertEquals(0, result.metrics().nodesVisited());
+        assertEquals(0, result.metrics().prunedBranches());
+        assertEquals(AlgorithmMetrics.PUZZLE_GEN, result.metrics().operationType());
+
+        CageLayoutResult again = generator.generateCagesWithMetrics(
+                solution, Difficulty.MEDIUM, SolverStrategyType.OPTIMIZED_MRV_PRUNING, new Random(1));
+        assertEquals(result.metrics().unionFindOps(), again.metrics().unionFindOps());
+        assertEquals(result.cages(), again.cages());
+    }
+
+    @Test
+    void reshapeWithEveryStrategyIsOracleVerifiedAndUnique() {
+        PuzzleGenerator puzzleGenerator = new PuzzleGenerator(generator);
+        for (SolverStrategyType strategy : SolverStrategyType.values()) {
+            Board board = puzzleGenerator.generate(Difficulty.HARD, "reshape-metrics-" + strategy);
+            List<Position> empty = board.getEmptyCells();
+            for (int i = 0; i < empty.size() / 2; i++) {
+                Cell cell = board.getCell(empty.get(i));
+                cell.place(cell.getSolutionValue());
+            }
+            int[][] solution = new int[9][9];
+            int[][] known = new int[9][9];
+            for (int r = 0; r < 9; r++) {
+                for (int c = 0; c < 9; c++) {
+                    solution[r][c] = board.getCell(r, c).getSolutionValue();
+                    known[r][c] = board.getCell(r, c).isSolved() ? solution[r][c] : 0;
+                }
+            }
+
+            CageLayoutResult result = generator.reshapeCages(board, strategy, new Random(8));
+
+            assertValidPartition(solution, result.cages());
+            assertTrue(solver.hasUniqueSolution(known, result.cages()));
+            AlgorithmMetrics metrics = result.metrics();
+            assertEquals(strategy, metrics.strategyUsed());
+            assertEquals(AlgorithmMetrics.CAGE_RESHAPE, metrics.operationType());
+            assertTrue(metrics.oracleVerified());
+            assertTrue(metrics.unionFindOps() > 0);
+            assertTrue(metrics.nodesVisited() > 0);
+            assertTrue(metrics.executionTimeMs() > 0);
+        }
+    }
+
+    @Test
+    void twoArgumentReshapeStaysBackwardCompatible() {
+        Board board = new PuzzleGenerator(generator).generate(Difficulty.HARD, "reshape-compat");
+        List<Cage> cages = generator.reshapeCages(board, new Random(2));
+        assertEquals(81, cages.stream().mapToInt(Cage::size).sum());
     }
 }

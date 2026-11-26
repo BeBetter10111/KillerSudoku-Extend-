@@ -1,7 +1,7 @@
 package com.killer.sudoku.modifier;
 
 import com.killer.sudoku.model.Position;
-import com.killer.sudoku.service.GameSession;
+import com.killer.sudoku.core.GameSession;
 
 public interface GameModifier {
 

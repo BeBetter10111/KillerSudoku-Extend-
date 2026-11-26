@@ -124,16 +124,17 @@ describe('useGameStore', () => {
     expect(state.notes[cellKey(8, 0)]).toEqual([7]);
   });
 
-  it('records a rejected move without touching the grid and clears the mark on selection', () => {
+  it('shows a wrong move as an unsolved value, marks the error and clears the mark on selection', () => {
     startGame();
-    const before = useGameStore.getState().grid;
     send({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 4, correct: false } });
     const first = useGameStore.getState().lastErrorCell;
     expect(first).toEqual({ row: 1, col: 1 });
-    expect(useGameStore.getState().grid).toBe(before);
+    expect(useGameStore.getState().grid[1][1]).toMatchObject({ currentValue: 4, solved: false, given: false });
+    expect(useGameStore.getState().grid[0][0]).toMatchObject({ currentValue: 5, solved: true, given: true });
 
     send({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 5, correct: false } });
     expect(useGameStore.getState().lastErrorCell).not.toBe(first);
+    expect(useGameStore.getState().grid[1][1]).toMatchObject({ currentValue: 5, solved: false });
 
     useGameStore.getState().selectCell({ row: 3, col: 3 });
     expect(useGameStore.getState().lastErrorCell).toBeNull();
@@ -367,5 +368,49 @@ describe('useGameStore algorithm evidence', () => {
     expect(useGameStore.getState().latestMetrics).toBeNull();
     expect(useGameStore.getState().metricsHistory).toEqual([]);
     expect(useGameStore.getState().solverStrategy).toBeNull();
+  });
+});
+
+describe('useGameStore wrong answers and reshape countdown', () => {
+  beforeEach(() => {
+    useGameStore.getState().resetGame();
+  });
+
+  it('turns a corrected cell back into a solved one', () => {
+    startGame();
+    send({ type: 'MOVE_REJECTED', payload: { position: { row: 2, col: 2 }, value: 9, correct: false } });
+    expect(useGameStore.getState().grid[2][2].solved).toBe(false);
+
+    send({ type: 'CELL_UPDATED', payload: { position: { row: 2, col: 2 }, value: 3, correct: true } });
+
+    expect(useGameStore.getState().grid[2][2]).toMatchObject({ currentValue: 3, solved: true });
+    expect(useGameStore.getState().lastErrorCell).toBeNull();
+  });
+
+  it('keeps the grid when a rejection carries no usable value', () => {
+    startGame();
+    const before = useGameStore.getState().grid;
+    send({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 0, correct: false } });
+    expect(useGameStore.getState().grid).toBe(before);
+    expect(useGameStore.getState().lastErrorCell).toEqual({ row: 1, col: 1 });
+  });
+
+  it('tracks the lives of a classic game through HP_CHANGED', () => {
+    startGame({ mode: 'CLASSIC', playerHealth: { maxHp: 3, currentHp: 3 }, bot: null });
+    expect(useGameStore.getState().maxHp).toBe(3);
+    send({ type: 'HP_CHANGED', payload: { maxHp: 3, currentHp: 2 } });
+    expect(useGameStore.getState().hp).toBe(2);
+  });
+
+  it('reads the reshape countdown from every tick and forgets it on reset', () => {
+    startGame();
+    expect(useGameStore.getState().reshapeRemainingMs).toBeNull();
+    send({ type: 'TICK', payload: { elapsedMs: 250, botRemainingMs: 100_000, reshapeRemainingMs: 299_750 } });
+    expect(useGameStore.getState().reshapeRemainingMs).toBe(299_750);
+    send({ type: 'TICK', payload: { elapsedMs: 500, botRemainingMs: 99_750 } });
+    expect(useGameStore.getState().reshapeRemainingMs).toBeNull();
+    send({ type: 'TICK', payload: { elapsedMs: 750, botRemainingMs: null, reshapeRemainingMs: 10_000 } });
+    useGameStore.getState().resetGame();
+    expect(useGameStore.getState().reshapeRemainingMs).toBeNull();
   });
 });

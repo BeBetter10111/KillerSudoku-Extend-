@@ -1,20 +1,25 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    proxy: {
-      '/ws-game': {
-        target: 'http://localhost:8080',
-        ws: true,
-        changeOrigin: true,
-      },
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const backendTarget = env.BACKEND_PROXY_TARGET || 'http://localhost:8080';
+
+  return {
+    plugins: [react()],
+    server: {
+      port: 5173,
+      proxy: {
+        '/ws-game': {
+          target: backendTarget,
+          ws: true,
+          changeOrigin: true,
+        },
+        '/api': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
       },
     },
-  },
+  };
 });

@@ -1,0 +1,43 @@
+name: killer-sudoku
+
+services:
+  backend:
+    image: maven:3.9-eclipse-temurin-17
+    working_dir: /workspace
+    command: mvn spring-boot:run
+    restart: unless-stopped
+    environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+      GAME_RESHAPE_INTERVAL_MS: "${RESHAPE_INTERVAL_MS:-0}"
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+    volumes:
+      - ./backend:/workspace
+      - backend-maven-cache:/root/.m2
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    restart: unless-stopped
+    environment:
+      BACKEND_PROXY_TARGET: "http://backend:8080"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:5173"
+
+volumes:
+  backend-maven-cache:
+  frontend-node-modules:
