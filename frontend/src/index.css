@@ -1,3 +1,52 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+    letter-spacing: 0.01em;
+  }
+
+  ::selection {
+    @apply bg-lilac-200 text-ink;
+  }
+}
+
+@layer components {
+  .sketch-card {
+    @apply rounded-2xl border-2 border-ink bg-white shadow-sketch;
+  }
+
+  .sketch-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border-2 border-ink bg-white px-4 py-2 font-bold text-ink shadow-sketch-sm outline-none transition-[transform,box-shadow,background-color] duration-100 hover:bg-blush-50 focus-visible:ring-2 focus-visible:ring-lilac-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-sketch-sm;
+  }
+
+  .sketch-btn-primary {
+    @apply bg-lilac-300 hover:bg-lilac-200;
+  }
+
+  .sketch-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-white px-3 py-1 text-sm font-bold text-ink;
+  }
+
+  .sketch-option {
+    @apply rounded-xl border-2 border-ink/25 bg-white text-left text-ink outline-none transition-[border-color,background-color,box-shadow] duration-100 hover:border-ink/60 focus-visible:ring-2 focus-visible:ring-lilac-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .sketch-option-selected {
+    @apply border-ink bg-blush-100 shadow-sketch-sm hover:border-ink;
+  }
+
+  .section-label {
+    @apply text-sm font-bold uppercase tracking-[0.18em] text-ink-soft;
+  }
+
+  .wavy-underline {
+    @apply underline decoration-lilac-400 decoration-wavy decoration-2 underline-offset-[10px];
+  }
+}

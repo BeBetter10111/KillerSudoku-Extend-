@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dashboard, type GameSetup } from './components/dashboard/Dashboard';
 import { SudokuBoard } from './components/board/SudokuBoard';
 import { ResultModal } from './components/game/ResultModal';
+import { AppHeader, navLinkClass } from './components/layout/AppHeader';
+import { Doodles } from './components/layout/Doodles';
 import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePanel';
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
@@ -21,9 +23,9 @@ function GameClock() {
     <span
       role="timer"
       aria-label="Elapsed time"
-      className="flex items-center gap-1.5 font-mono text-xl font-bold tabular-nums text-slate-100"
+      className="flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-ink"
     >
-      <Clock3 className="h-5 w-5 text-slate-400" aria-hidden="true" />
+      <Clock3 className="h-5 w-5 rounded-full bg-sunny-300 text-ink" aria-hidden="true" />
       {formatClock(elapsedMs)}
     </span>
   );
@@ -36,6 +38,8 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
   const mode = useGameStore((state) => state.mode);
   const difficulty = useGameStore((state) => state.difficulty);
   const seed = useGameStore((state) => state.seed);
+  const hp = useGameStore((state) => state.hp);
+  const maxHp = useGameStore((state) => state.maxHp);
 
   return (
     <ResultModal
@@ -45,6 +49,8 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
       mode={mode}
       difficulty={difficulty}
       seed={seed}
+      hp={hp}
+      maxHp={maxHp}
       onPlayAgain={onPlayAgain}
       onBackToDashboard={onBackToDashboard}
     />
@@ -53,8 +59,8 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
 
 function StartingScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-900 text-slate-300">
-      <p role="status" className="animate-pulse text-lg">
+    <main className="flex min-h-screen items-center justify-center bg-paper text-ink-soft">
+      <p role="status" className="sketch-card animate-pulse px-6 py-4 text-2xl">
         Starting a new game…
       </p>
     </main>
@@ -135,37 +141,46 @@ export default function App() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-900 text-slate-100">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 p-3 sm:p-6">
-        <ArenaHeader onQuit={quit} />
+    <main className="relative min-h-screen bg-paper text-ink">
+      <Doodles />
+      <AppHeader>
+        <nav aria-label="Game" className="flex items-center gap-5 sm:gap-7">
+          <span aria-current="page" className={navLinkClass(true)}>
+            Play
+          </span>
+          {gameStatus === 'PLAYING' && (
+            <button type="button" onClick={quit} className={navLinkClass(false)}>
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Quit
+            </button>
+          )}
+        </nav>
+      </AppHeader>
+      <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-4 px-3 py-5 sm:px-6 sm:py-6">
         {storeError !== null && gameStatus === 'PLAYING' && (
           <div
             role="alert"
-            className="flex w-full items-center justify-between gap-3 rounded-xl border border-rose-500/60 bg-rose-500/10 px-4 py-2 text-sm text-rose-200"
+            className="flex w-full items-center justify-between gap-3 rounded-xl border-2 border-red-300 bg-red-50 px-4 py-2 text-red-700"
           >
             <span>{storeError}</span>
-            <button
-              type="button"
-              onClick={() => void backToDashboard()}
-              className="shrink-0 rounded-lg bg-rose-600 px-3 py-1 font-semibold text-white hover:bg-rose-500"
-            >
+            <button type="button" onClick={() => void backToDashboard()} className="sketch-btn shrink-0 px-3 py-1 text-sm">
               Back to Dashboard
             </button>
           </div>
         )}
-        <div className="flex w-full flex-col items-center gap-3 lg:flex-row lg:items-start lg:justify-center">
-          <div className="flex w-full max-w-3xl flex-col items-center gap-3">
-            <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
-              <HealthBar />
-              <BotTimer />
-              <ReshapeTimer />
-            </div>
-            <SudokuBoard />
-          </div>
-          <aside className="w-full max-w-3xl lg:w-80 lg:shrink-0">
-            <AlgorithmEvidencePanel />
-          </aside>
+        <GameInfoBar />
+        <div className="flex w-full flex-wrap items-center gap-2.5 empty:hidden">
+          <HealthBar />
+          <BotTimer />
+          <ReshapeTimer />
         </div>
+        <SudokuBoard
+          aside={
+            <aside aria-label="Algorithm sidebar">
+              <AlgorithmEvidencePanel />
+            </aside>
+          }
+        />
       </div>
       {(gameStatus === 'WON' || gameStatus === 'LOST') && (
         <ConnectedResultModal onPlayAgain={playAgain} onBackToDashboard={() => void backToDashboard()} />
@@ -174,40 +189,30 @@ export default function App() {
   );
 }
 
-function ArenaHeader({ onQuit }: { onQuit: () => void }) {
+const CHIP = 'rounded-full border-2 px-3 py-0.5 text-base';
+
+function GameInfoBar() {
   const mode = useGameStore((state) => state.mode);
   const difficulty = useGameStore((state) => state.difficulty);
   const seed = useGameStore((state) => state.seed);
   const solverStrategy = useGameStore((state) => state.solverStrategy);
-  const gameStatus = useGameStore((state) => state.gameStatus);
   const isDaily = seed !== null && seed.startsWith('daily-');
 
   return (
-    <header className="flex w-full items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
-        <span className="rounded-md bg-slate-700 px-2 py-1">{mode === 'BOT_CHALLENGE' ? 'Bot Challenge' : 'Classic'}</span>
-        <span className="rounded-md bg-slate-700 px-2 py-1">{difficulty}</span>
-        {isDaily && <span className="rounded-md bg-amber-400/20 px-2 py-1 text-amber-200">Daily</span>}
+    <div className="flex w-full flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className={`${CHIP} border-ink bg-blush-100`}>{mode === 'BOT_CHALLENGE' ? 'Bot Challenge' : 'Classic'}</span>
+        <span className={`${CHIP} border-ink bg-white`}>
+          {difficulty !== null ? difficulty.charAt(0) + difficulty.slice(1).toLowerCase() : ''}
+        </span>
+        {isDaily && <span className={`${CHIP} border-sunny-500 bg-sunny-100 text-amber-900`}>Daily</span>}
         {solverStrategy !== null && (
-          <span data-testid="engine-chip" className="rounded-md bg-emerald-500/15 px-2 py-1 text-emerald-200">
+          <span data-testid="engine-chip" className={`${CHIP} border-lilac-300 bg-lilac-50 text-lilac-600`}>
             {solverStrategy === 'NAIVE_ORACLE' ? 'Naive Oracle' : 'Optimized'}
           </span>
         )}
       </div>
       <GameClock />
-      {gameStatus === 'PLAYING' ? (
-        <button
-          type="button"
-          onClick={onQuit}
-          className="flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-600"
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          Quit
-        </button>
-      ) : (
-        <span className="w-[72px]" aria-hidden="true" />
-      )}
-    </header>
+    </div>
   );
 }
-
