@@ -28,9 +28,7 @@ export const CageOverlay = memo(function CageOverlay() {
             strokeDasharray="7 7"
             strokeWidth={isAlertActive ? 4 : 3}
             data-alert={isAlertActive}
-            className={
-              isAlertActive ? 'animate-cage-alert stroke-amber-400 motion-reduce:animate-none' : 'stroke-slate-400/80'
-            }
+            className={isAlertActive ? 'stroke-amber-400' : 'stroke-slate-400/80'}
           />
         ))}
       </svg>

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.killer.sudoku.config.GameBalanceConfig;
 import com.killer.sudoku.model.AlgorithmMetrics;
 import com.killer.sudoku.model.BotEntity;
 import com.killer.sudoku.model.Cell;
@@ -33,14 +34,16 @@ class GameSessionTest {
     }
 
     @Test
-    void startEmitsInitStateFirstAndHoldsBotBackUntilSpawnDelay() {
+    void startEmitsInitStateFirstAndSpawnsBotWithTheLongFirstTimeout() {
         RecordingListener listener = new RecordingListener();
         GameSession session = session(GameMode.BOT_CHALLENGE, Difficulty.MEDIUM, "start", listener);
         session.start();
         session.start();
 
         assertEquals(List.of("INIT"), listener.types());
-        assertTrue(session.getBot().isEmpty());
+        BotEntity bot = session.getBot().orElseThrow();
+        assertTrue(bot.isRevealed());
+        assertEquals(GameBalanceConfig.forBotChallenge(Difficulty.MEDIUM).firstBotTimeoutMs(), bot.getMaxTimeoutMs());
     }
 
     @Test

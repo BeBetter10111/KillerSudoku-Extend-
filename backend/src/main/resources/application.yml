@@ -1,5 +1,8 @@
 server:
   port: 8080
+  # Render (and other PaaS) terminate TLS at a proxy; trust X-Forwarded-* so same-origin
+  # https requests are not mistaken for cross-origin ones (CORS 403 on POST).
+  forward-headers-strategy: framework
 
 spring:
   application:

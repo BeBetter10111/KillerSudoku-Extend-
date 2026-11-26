@@ -22,11 +22,20 @@ class ServerReplayValidatorTest {
 
     private final ServerReplayValidator validator = new ServerReplayValidator(TestSessions.factory());
 
+    // Classic mode only has 3 lives, so the scripted player may make at most 2 mistakes there.
+    private static final int CLASSIC_WRONG_EVERY = 40;
+
     private GameSession playedGame(GameMode mode, Difficulty difficulty, int idleTicks, RecordingListener listener) {
+        int wrongEvery = mode == GameMode.CLASSIC ? CLASSIC_WRONG_EVERY : 9;
+        return playedGame(mode, difficulty, idleTicks, 12, wrongEvery, listener);
+    }
+
+    private GameSession playedGame(GameMode mode, Difficulty difficulty, int idleTicks, int ticksPerMove,
+            int wrongEvery, RecordingListener listener) {
         GameSession session = TestSessions.factory().create("played", mode, difficulty, SEED, "Frog");
         session.addListener(listener);
         session.start();
-        TestSessions.playToCompletion(session, idleTicks, 12, 7, 9);
+        TestSessions.playToCompletion(session, idleTicks, ticksPerMove, 7, wrongEvery);
         assertTrue(session.isFinished());
         return session;
     }
@@ -45,7 +54,9 @@ class ServerReplayValidatorTest {
     @Test
     void acceptsHonestHardGameThatSpansCageReshapes() {
         RecordingListener listener = new RecordingListener();
-        GameSession session = playedGame(GameMode.BOT_CHALLENGE, Difficulty.HARD, 1_300, listener);
+        // HARD starts with no givens (81 moves). 16 ticks (4s) per move keeps the player ahead of the 5s
+        // minimum bot timeout while the game still runs past the 300s reshape interval.
+        GameSession session = playedGame(GameMode.BOT_CHALLENGE, Difficulty.HARD, 0, 16, 20, listener);
         assertTrue(session.isWon());
         assertTrue(listener.count("ALERT") >= 1);
         assertTrue(listener.count("RESHAPED") >= 1);

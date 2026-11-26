@@ -81,7 +81,8 @@ public final class BacktrackingCageGenerator {
         SudokuSolver solver = SolverFactory.forStrategy(strategy);
         AlgorithmMetrics total = AlgorithmMetrics.empty(strategy, AlgorithmMetrics.CAGE_RESHAPE);
         if (CELL_COUNT - currentBoard.getEmptyCellsCount() < MIN_KNOWN_CELLS_FOR_RESHAPE) {
-            return generateCagesWithMetrics(solution, RESHAPE_DIFFICULTY, strategy, rng);
+            CageLayoutResult layout = generateCagesWithMetrics(solution, RESHAPE_DIFFICULTY, strategy, rng);
+            return new CageLayoutResult(layout.cages(), total.plus(layout.metrics()));
         }
         CageLayoutResult last = null;
         double millis = 0;
