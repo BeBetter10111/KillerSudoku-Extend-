@@ -185,8 +185,6 @@ describe('App', () => {
     expect(screen.getByTestId('operation-badge').textContent).toBe('CAGE_RESHAPE');
     expect(screen.getByTestId('metric-nodes').textContent).toBe('4,242');
   });
-<<<<<<< HEAD
-=======
 
   it('starts the game with the solver engine picked on the dashboard and shows it in the arena', async () => {
     render(<App />);
@@ -219,5 +217,4 @@ describe('App', () => {
     emit({ type: 'TICK', payload: { elapsedMs: 250, botRemainingMs: 119_750, reshapeRemainingMs: 299_750 } });
     expect(screen.getByTestId('reshape-timer-value').textContent).toBe('5:00');
   });
->>>>>>> 8d4763ea9d5655dc0a89b0d0e40e85853feb7426
 });

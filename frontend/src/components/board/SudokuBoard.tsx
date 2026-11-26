@@ -1,5 +1,5 @@
 import { Eraser, Pencil } from 'lucide-react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { submitCell } from '../../services/socketClient';
 import { useGameStore } from '../../store/useGameStore';
 import { CageOverlay } from './CageOverlay';
@@ -110,18 +110,16 @@ function Numpad() {
   }, [grid]);
 
   return (
-    <div className="flex flex-col gap-2" data-testid="numpad">
-      <div className="grid grid-cols-9 gap-1 sm:gap-1.5">
+    <div className="flex flex-col gap-2.5" data-testid="numpad">
+      <div className="grid grid-cols-9 gap-1.5 sm:gap-2 lg:grid-cols-3 lg:gap-2.5">
         {DIGITS.map((digit) => (
           <button
             key={digit}
             type="button"
             disabled={placedCounts[digit] >= GRID_SIZE}
             onClick={() => enterDigit(digit)}
-            className={`aspect-[3/4] rounded-lg text-lg font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-30 sm:text-2xl ${
-              notesMode
-                ? 'bg-slate-700 text-amber-200 hover:bg-slate-600'
-                : 'bg-sky-700 text-white hover:bg-sky-600 active:bg-sky-500'
+            className={`sketch-btn aspect-[3/4] px-0 py-0 text-2xl font-normal disabled:opacity-30 sm:text-3xl lg:aspect-auto lg:h-14 ${
+              notesMode ? 'bg-sunny-100 hover:bg-sunny-300' : ''
             }`}
           >
             {digit}
@@ -133,9 +131,7 @@ function Numpad() {
           type="button"
           aria-pressed={notesMode}
           onClick={toggleNotesMode}
-          className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-            notesMode ? 'bg-amber-500 text-slate-900' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-          }`}
+          className={`sketch-btn px-3 py-2 font-normal ${notesMode ? 'bg-sunny-300 hover:bg-sunny-300' : ''}`}
         >
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Notes {notesMode ? 'ON' : 'OFF'}
@@ -143,7 +139,7 @@ function Numpad() {
         <button
           type="button"
           onClick={clearNotes}
-          className="flex items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-600"
+          className="sketch-btn px-3 py-2 font-normal"
         >
           <Eraser className="h-4 w-4" aria-hidden="true" />
           Erase notes
@@ -153,7 +149,13 @@ function Numpad() {
   );
 }
 
-export function SudokuBoard({ className = '' }: { className?: string }) {
+interface SudokuBoardProps {
+  className?: string;
+  /** Extra content shown under the number pad (e.g. the algorithm panel). */
+  aside?: ReactNode;
+}
+
+export function SudokuBoard({ className = '', aside }: SudokuBoardProps) {
   const grid = useGameStore((state) => state.grid);
   const selectedCell = useGameStore((state) => state.selectedCell);
   const notes = useGameStore((state) => state.notes);
@@ -176,11 +178,11 @@ export function SudokuBoard({ className = '' }: { className?: string }) {
   const selectedValue = selectedCell ? grid[selectedCell.row][selectedCell.col].currentValue : 0;
 
   return (
-    <div className={`flex w-full max-w-[560px] flex-col gap-4 ${className}`}>
+    <div className={`flex w-full flex-col items-center gap-5 lg:flex-row lg:items-start lg:justify-center ${className}`}>
       <div
         role="group"
         aria-label="Killer Sudoku board"
-        className="relative aspect-square w-full touch-manipulation overflow-hidden rounded-xl border-2 border-slate-300 bg-slate-800 shadow-xl"
+        className="relative aspect-square w-full max-w-[560px] touch-manipulation overflow-hidden rounded-2xl border-[3px] border-ink bg-white shadow-sketch-lg"
       >
         <div className="grid h-full w-full grid-cols-9 grid-rows-9">
           {grid.map((line) =>
@@ -208,7 +210,10 @@ export function SudokuBoard({ className = '' }: { className?: string }) {
         </div>
         <CageOverlay />
       </div>
-      <Numpad />
+      <div className="flex w-full max-w-[560px] flex-col gap-5 lg:w-80 lg:shrink-0">
+        <Numpad />
+        {aside}
+      </div>
     </div>
   );
 }

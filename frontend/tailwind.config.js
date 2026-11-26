@@ -3,6 +3,45 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      colors: {
+        paper: '#fffafb',
+        ink: {
+          DEFAULT: '#3d2c2e',
+          soft: '#6e5a5c',
+          faint: '#a8979a',
+        },
+        blush: {
+          50: '#fff5f7',
+          100: '#ffe4e9',
+          200: '#fdd0d8',
+          300: '#f8afbc',
+          500: '#e07388',
+        },
+        lilac: {
+          50: '#f8f4fd',
+          100: '#efe6fa',
+          200: '#ddcbf2',
+          300: '#c4a8e0',
+          400: '#a98ad0',
+          500: '#8f6cbd',
+          600: '#7553a3',
+        },
+        sunny: {
+          100: '#fff6d1',
+          300: '#fde68a',
+          500: '#f4c443',
+        },
+        cloud: '#d8ecfb',
+      },
+      fontFamily: {
+        sans: ['"Patrick Hand"', '"Comic Sans MS"', '"Chalkboard SE"', 'cursive'],
+        mono: ['"Courier Prime"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      boxShadow: {
+        'sketch-sm': '2px 2px 0 0 #3d2c2e',
+        sketch: '3px 3px 0 0 #3d2c2e',
+        'sketch-lg': '5px 5px 0 0 #3d2c2e',
+      },
       keyframes: {
         shake: {
           '0%, 100%': { transform: 'translateX(0)' },
