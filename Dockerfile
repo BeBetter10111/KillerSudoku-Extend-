@@ -10,11 +10,11 @@ RUN npm run build
 
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
-COPY backend/pom.xml ./
-RUN mvn -B -q dependency:go-offline
+COPY backend/pom.xml backend/settings.xml ./
+RUN mvn -B -q -s settings.xml dependency:go-offline
 COPY backend/src ./src
 COPY --from=web /web/dist ./src/main/resources/static
-RUN mvn -B -q -DskipTests package
+RUN mvn -B -q -s settings.xml -DskipTests package
 
 FROM eclipse-temurin:17-jre
 RUN groupadd --system sudoku && useradd --system --gid sudoku --no-create-home sudoku
