@@ -4,6 +4,7 @@ import { Dashboard, type GameSetup } from './components/dashboard/Dashboard';
 import { SudokuBoard } from './components/board/SudokuBoard';
 import { ResultModal } from './components/game/ResultModal';
 import { AlertBanner } from './components/status/AlertBanner';
+import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePanel';
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
 import { connectAndStartGame, leaveGame } from './services/socketClient';
@@ -136,7 +137,7 @@ export default function App() {
 
   return (
     <main className="min-h-screen bg-slate-900 text-slate-100">
-      <div className="mx-auto flex max-w-3xl flex-col items-center gap-3 p-3 sm:p-6">
+      <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 p-3 sm:p-6">
         <ArenaHeader onQuit={quit} />
         {storeError !== null && gameStatus === 'PLAYING' && (
           <div
@@ -154,11 +155,18 @@ export default function App() {
           </div>
         )}
         <AlertBanner />
-        <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
-          <HealthBar />
-          <BotTimer />
+        <div className="flex w-full flex-col items-center gap-3 lg:flex-row lg:items-start lg:justify-center">
+          <div className="flex w-full max-w-3xl flex-col items-center gap-3">
+            <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
+              <HealthBar />
+              <BotTimer />
+            </div>
+            <SudokuBoard />
+          </div>
+          <aside className="w-full max-w-3xl lg:w-80 lg:shrink-0">
+            <AlgorithmEvidencePanel />
+          </aside>
         </div>
-        <SudokuBoard />
       </div>
       {(gameStatus === 'WON' || gameStatus === 'LOST') && (
         <ConnectedResultModal onPlayAgain={playAgain} onBackToDashboard={() => void backToDashboard()} />

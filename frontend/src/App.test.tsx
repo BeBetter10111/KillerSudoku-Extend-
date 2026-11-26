@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { connectAndStartGame, leaveGame } from './services/socketClient';
 import { useGameStore } from './store/useGameStore';
-import { emit, revealedBot, startGame } from './test/fixtures';
+import { algorithmMetrics, boardState, emit, revealedBot, startGame } from './test/fixtures';
 
 vi.mock('./services/socketClient', () => ({
   connectAndStartGame: vi.fn(() => Promise.resolve('session-1')),
@@ -163,5 +163,26 @@ describe('App', () => {
     });
     expect(screen.getByText(/did not respond/)).toBeTruthy();
     expect(leaveGame).toHaveBeenCalled();
+  });
+
+  it('shows the algorithm evidence sidebar next to the board and keeps it live', () => {
+    render(<App />);
+    emit({
+      type: 'GAME_STARTED',
+      payload: boardState(),
+      metrics: algorithmMetrics({ operationType: 'PUZZLE_GEN', strategyUsed: 'OPTIMIZED_MRV_PRUNING' }),
+    });
+
+    const panel = screen.getByTestId('algorithm-evidence');
+    expect(panel.closest('aside')).not.toBeNull();
+    expect(screen.getByTestId('strategy-badge').textContent).toBe('OPTIMIZED_MRV_PRUNING');
+    expect(screen.getByTestId('oracle-badge').textContent).toBe('Oracle Verified (100% Match)');
+
+    emit({
+      type: 'CAGE_RESHAPED',
+      payload: { cages: [], metrics: algorithmMetrics({ operationType: 'CAGE_RESHAPE', nodesVisited: 4242 }) },
+    });
+    expect(screen.getByTestId('operation-badge').textContent).toBe('CAGE_RESHAPE');
+    expect(screen.getByTestId('metric-nodes').textContent).toBe('4,242');
   });
 });
