@@ -22,6 +22,8 @@ WORKDIR /app
 COPY --from=build /build/target/killer-sudoku-backend-*.jar /app/app.jar
 RUN mkdir -p /app/data && chown sudoku:sudoku /app/data
 USER sudoku
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70"
+# Tuned for Render free tier (512MB RAM, shared CPU): small heap, serial GC, fast JIT warm-up,
+# lazy bean/JPA-repository init so the HTTP port opens quickly.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k -XX:MaxMetaspaceSize=160m"     SPRING_MAIN_LAZY_INITIALIZATION=true     SPRING_DATA_JPA_REPOSITORIES_BOOTSTRAP_MODE=lazy
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "exec java -Dserver.port=${PORT:-8080} -jar /app/app.jar"]
