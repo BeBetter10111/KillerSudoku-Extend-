@@ -1,9 +1,10 @@
 import { Clock3, LogOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Dashboard, type GameSetup } from './components/dashboard/Dashboard';
-import { PageShell, type NavKey } from './components/layout/AppShell';
-import { SudokuBoard } from './components/board/SudokuBoard';
+import { Dashboard, type DashboardTab, type GameSetup } from './components/dashboard/Dashboard';
+import { Numpad, SudokuBoard } from './components/board/SudokuBoard';
 import { ResultModal } from './components/game/ResultModal';
+import { Doodles } from './components/layout/Doodles';
+import { TopNav, navItemClass } from './components/layout/TopNav';
 import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePanel';
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
@@ -22,9 +23,9 @@ function GameClock() {
     <span
       role="timer"
       aria-label="Elapsed time"
-      className="ml-auto flex items-center gap-1.5 font-mono text-xl font-bold tabular-nums text-ink"
+      className="flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-ink"
     >
-      <Clock3 className="h-5 w-5 fill-doodle-yellow text-ink" aria-hidden="true" />
+      <Clock3 className="h-5 w-5 text-ink" strokeWidth={2.5} aria-hidden="true" />
       {formatClock(elapsedMs)}
     </span>
   );
@@ -37,8 +38,6 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
   const mode = useGameStore((state) => state.mode);
   const difficulty = useGameStore((state) => state.difficulty);
   const seed = useGameStore((state) => state.seed);
-  const hp = useGameStore((state) => state.hp);
-  const maxHp = useGameStore((state) => state.maxHp);
 
   return (
     <ResultModal
@@ -48,8 +47,6 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
       mode={mode}
       difficulty={difficulty}
       seed={seed}
-      hp={hp}
-      maxHp={maxHp}
       onPlayAgain={onPlayAgain}
       onBackToDashboard={onBackToDashboard}
     />
@@ -58,8 +55,9 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
 
 function StartingScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-pale-blush font-doodle text-ink">
-      <p role="status" className="card-doodle animate-pulse px-6 py-4 text-lg">
+    <main className="flex min-h-screen items-center justify-center bg-white text-muted">
+      <Doodles />
+      <p role="status" className="sketch-card relative z-10 animate-pulse px-6 py-4 text-xl">
         Starting a new game…
       </p>
     </main>
@@ -71,7 +69,7 @@ export default function App() {
   const storeError = useGameStore((state) => state.errorMessage);
   const [startKind, setStartKind] = useState<StartKind>('idle');
   const [startError, setStartError] = useState<string | null>(null);
-  const [dashboardTab, setDashboardTab] = useState<NavKey>('play');
+  const [dashboardTab, setDashboardTab] = useState<DashboardTab>('play');
   const lastSetup = useRef<GameSetup | null>(null);
 
   const startGame = useCallback(async (setup: GameSetup, kind: Exclude<StartKind, 'idle'>) => {
@@ -109,25 +107,27 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [startKind, gameStatus, storeError]);
 
-  const backToDashboard = useCallback(async (tab: NavKey = 'play') => {
-    setDashboardTab(tab);
+  const backToDashboard = useCallback(async () => {
     await leaveGame();
     useGameStore.getState().resetGame();
     setStartError(null);
   }, []);
 
-  const quit = useCallback(
-    (tab: NavKey = 'play') => {
-      if (useGameStore.getState().gameStatus !== 'PLAYING') {
-        void backToDashboard(tab);
-        return;
-      }
-      if (window.confirm('Leave this game? Your progress will be lost.')) {
-        void backToDashboard(tab);
-      }
-    },
-    [backToDashboard],
-  );
+  const quit = useCallback(() => {
+    if (window.confirm('Leave this game? Your progress will be lost.')) {
+      void backToDashboard();
+    }
+  }, [backToDashboard]);
+
+  const openBenchmarkLab = useCallback(() => {
+    if (
+      useGameStore.getState().gameStatus !== 'PLAYING' ||
+      window.confirm('Leave this game? Your progress will be lost.')
+    ) {
+      setDashboardTab('benchmark');
+      void backToDashboard();
+    }
+  }, [backToDashboard]);
 
   const playAgain = useCallback(() => {
     if (lastSetup.current) {
@@ -143,89 +143,93 @@ export default function App() {
       <Dashboard
         onStart={(setup) => void startGame(setup, 'fresh')}
         isStarting={startKind === 'fresh'}
-        initialTab={dashboardTab}
         errorMessage={startError ?? storeError}
+        tab={dashboardTab}
+        onTabChange={setDashboardTab}
       />
     );
   }
 
   return (
-    <PageShell
-      active="play"
-      onNavigate={(key) => {
-        if (key !== 'play') {
-          quit(key);
-        }
-      }}
-    >
-      <main className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-3 py-5 sm:px-6">
-        <StatusBar />
-        <ArenaChips />
+    <main className="relative min-h-screen bg-white text-ink">
+      <Doodles />
+      <TopNav asHeading={false}>
+        <nav aria-label="Main" className="flex items-center gap-5">
+          <span aria-current="page" className={navItemClass(true)}>
+            Play
+          </span>
+          <button type="button" onClick={openBenchmarkLab} className={navItemClass(false)}>
+            Benchmark Lab
+          </button>
+        </nav>
+      </TopNav>
+      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-4 p-3 sm:p-6">
+        <ArenaHeader onQuit={quit} />
         {storeError !== null && gameStatus === 'PLAYING' && (
           <div
             role="alert"
-            className="flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-crimson bg-blush px-4 py-2 text-sm text-crimson"
+            className="flex w-full items-center justify-between gap-3 rounded-xl border-[1.5px] border-ink bg-pale-blush px-4 py-2 text-crimson"
           >
             <span>{storeError}</span>
-            <button type="button" onClick={() => void backToDashboard()} className="btn-doodle shrink-0 px-3 py-1 text-xs">
+            <button type="button" onClick={() => void backToDashboard()} className="sketch-btn shrink-0 px-3 py-1 text-sm">
               Back to Dashboard
             </button>
           </div>
         )}
-        <SudokuBoard
-          sidebar={
-            <aside className="flex flex-col gap-5">
-              <AlgorithmEvidencePanel />
-              {gameStatus === 'PLAYING' && (
-                <button
-                  type="button"
-                  onClick={() => quit()}
-                  className="btn-doodle flex items-center justify-center gap-2 bg-lavender px-4 py-3 text-sm"
-                >
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
-                  New Game
-                </button>
-              )}
-            </aside>
-          }
-        />
-      </main>
+        <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
+          <HealthBar />
+          <BotTimer />
+          <ReshapeTimer />
+        </div>
+        <div className="flex w-full flex-col items-center gap-5 lg:flex-row lg:items-start lg:justify-center">
+          <SudokuBoard showNumpad={false} className="lg:flex-1" />
+          <aside className="flex w-full max-w-[560px] flex-col gap-5 lg:w-80 lg:shrink-0">
+            <Numpad />
+            <AlgorithmEvidencePanel />
+          </aside>
+        </div>
+      </div>
       {(gameStatus === 'WON' || gameStatus === 'LOST') && (
         <ConnectedResultModal onPlayAgain={playAgain} onBackToDashboard={() => void backToDashboard()} />
       )}
-    </PageShell>
+    </main>
   );
 }
 
-function StatusBar() {
-  return (
-    <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border-2 border-ink bg-white px-3 py-2 shadow-doodle-sm">
-      <HealthBar />
-      <BotTimer />
-      <ReshapeTimer />
-      <GameClock />
-    </div>
-  );
-}
-
-function ArenaChips() {
+function ArenaHeader({ onQuit }: { onQuit: () => void }) {
   const mode = useGameStore((state) => state.mode);
   const difficulty = useGameStore((state) => state.difficulty);
   const seed = useGameStore((state) => state.seed);
   const solverStrategy = useGameStore((state) => state.solverStrategy);
+  const gameStatus = useGameStore((state) => state.gameStatus);
   const isDaily = seed !== null && seed.startsWith('daily-');
-  const chip = 'rounded-full border border-ink/60 px-2.5 py-0.5';
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-1.5 text-[11px] text-ink">
-      <span className={`${chip} bg-lavender/40`}>{mode === 'BOT_CHALLENGE' ? 'Bot Challenge' : 'Classic'}</span>
-      <span className={`${chip} bg-blush`}>{difficulty}</span>
-      {isDaily && <span className={`${chip} bg-doodle-yellow`}>Daily</span>}
-      {solverStrategy !== null && (
-        <span data-testid="engine-chip" className={`${chip} bg-doodle-sky`}>
-          {solverStrategy === 'NAIVE_ORACLE' ? 'Naive Oracle' : 'Optimized'}
-        </span>
+    <header className="sketch-panel flex w-full items-center justify-between gap-3 border-2 border-lavender px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 text-sm">
+        <span className="sketch-pill bg-pale-blush py-0.5">{mode === 'BOT_CHALLENGE' ? 'Bot Challenge' : 'Classic'}</span>
+        <span className="sketch-pill py-0.5">{difficulty}</span>
+        {isDaily && <span className="sketch-pill bg-doodle-yellow py-0.5">Daily</span>}
+        {solverStrategy !== null && (
+          <span data-testid="engine-chip" className="sketch-pill bg-doodle-sky py-0.5">
+            {solverStrategy === 'NAIVE_ORACLE' ? 'Naive Oracle' : 'Optimized'}
+          </span>
+        )}
+      </div>
+      <GameClock />
+      {gameStatus === 'PLAYING' ? (
+        <button
+          type="button"
+          onClick={onQuit}
+          className="sketch-btn flex items-center gap-1.5 px-3 py-1 text-sm"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Quit
+        </button>
+      ) : (
+        <span className="w-[72px]" aria-hidden="true" />
       )}
-    </div>
+    </header>
   );
 }
+

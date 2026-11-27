@@ -11,9 +11,9 @@ const MIN_BAR_PERCENT = 8;
 
 function Metric({ label, value, testId }: { label: string; value: string; testId: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 border-b border-dashed border-dusty-rose py-1.5 last:border-b-0">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd data-testid={testId} className="font-mono text-xs tabular-nums text-ink">
+    <div className="flex items-center justify-between gap-2 border-b border-dashed border-ink/25 py-1.5">
+      <dt className="text-muted">{label}</dt>
+      <dd data-testid={testId} className="font-mono text-sm font-bold tabular-nums text-ink">
         {value}
       </dd>
     </div>
@@ -25,7 +25,7 @@ function OracleBadge({ verified }: { verified: boolean }) {
     return (
       <span
         data-testid="oracle-badge"
-        className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-blush px-2.5 py-0.5 text-[11px] text-ink"
+        className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-ink bg-blush px-2.5 py-0.5 text-sm text-ink"
       >
         <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
         Oracle Verified (100% Match)
@@ -35,7 +35,7 @@ function OracleBadge({ verified }: { verified: boolean }) {
   return (
     <span
       data-testid="oracle-badge"
-      className="inline-flex items-center gap-1.5 rounded-full border-2 border-muted/50 bg-white px-2.5 py-0.5 text-[11px] text-muted"
+      className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-ink/40 bg-white px-2.5 py-0.5 text-sm text-muted"
     >
       <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
       Not oracle-verified
@@ -57,8 +57,8 @@ function Sparkline({ history }: { history: AlgorithmMetrics[] }) {
         <div
           key={history.length - recent.length + index}
           title={`${run.operationType}: ${formatMillis(run.executionTimeMs)}`}
-          className={`min-w-[6px] flex-1 rounded-sm border border-ink/60 ${
-            run.strategyUsed === 'NAIVE_ORACLE' ? 'bg-dusty-rose' : 'bg-lavender'
+          className={`min-w-[6px] flex-1 rounded-t-sm border-[1.5px] border-b-0 border-ink ${
+            run.strategyUsed === 'NAIVE_ORACLE' ? 'bg-blush' : 'bg-lavender'
           }`}
           style={{ height: `${Math.max(MIN_BAR_PERCENT, (run.executionTimeMs / peak) * 100)}%` }}
         />
@@ -88,17 +88,17 @@ export function AlgorithmEvidencePanel() {
     <section
       aria-label="Algorithm evidence"
       data-testid="algorithm-evidence"
-      className={`w-full rounded-2xl border-2 bg-white p-4 shadow-doodle transition-colors duration-500 ${
-        isFresh ? 'border-cage-purple' : 'border-ink'
+      className={`w-full rounded-2xl border-2 bg-white p-4 shadow-sketch transition-colors duration-500 ${
+        isFresh ? 'border-emerald-400/70' : 'border-ink'
       }`}
     >
-      <header className="mb-2 flex items-center justify-between gap-2 border-b-2 border-dashed border-dusty-rose pb-2">
-        <h2 className="flex items-center gap-1.5 font-hand text-xl text-ink">
-          <Activity className="h-4 w-4 text-cage-purple" aria-hidden="true" />
+      <header className="mb-2 flex items-center justify-between gap-2 border-b border-dashed border-ink/30 pb-2">
+        <h2 className="flex items-center gap-1.5 text-xl font-bold text-ink">
+          <Activity className="h-4 w-4 text-cage" aria-hidden="true" />
           Algorithm Evidence
         </h2>
         {latest !== null && (
-          <span className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-blush px-2 py-0.5 text-[11px] text-ink">
+          <span className="flex items-center gap-1.5 rounded-full border-[1.5px] border-ink bg-blush px-2 text-sm text-ink">
             <span
               className={`h-2 w-2 rounded-full bg-crimson ${isFresh ? 'animate-pulse motion-reduce:animate-none' : ''}`}
               aria-hidden="true"
@@ -109,7 +109,7 @@ export function AlgorithmEvidencePanel() {
       </header>
 
       {latest === null ? (
-        <p data-testid="evidence-empty" className="py-4 text-center text-sm text-muted">
+        <p data-testid="evidence-empty" className="py-4 text-center text-muted">
           Waiting for algorithm telemetry...
         </p>
       ) : (
@@ -117,13 +117,13 @@ export function AlgorithmEvidencePanel() {
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <span
               data-testid="strategy-badge"
-              className="rounded-full border border-ink bg-lavender/50 px-2 py-0.5 font-mono text-[10px] text-ink"
+              className="rounded-full border-[1.5px] border-ink bg-white px-2 py-0.5 font-mono text-xs font-bold text-ink"
             >
               {latest.strategyUsed}
             </span>
             <span
               data-testid="operation-badge"
-              className="rounded-full border border-ink bg-doodle-sky px-2 py-0.5 font-mono text-[10px] text-ink"
+              className="rounded-full border-[1.5px] border-ink bg-lavender/40 px-2 py-0.5 font-mono text-xs font-bold text-ink"
             >
               {latest.operationType}
             </span>
@@ -142,13 +142,13 @@ export function AlgorithmEvidencePanel() {
           </div>
 
           {history.length > 0 && (
-            <div className="mt-3 border-t-2 border-dashed border-dusty-rose pt-2">
-              <p className="mb-1 flex items-center justify-between text-[11px] text-muted">
+            <div className="mt-3 border-t border-dashed border-ink/30 pt-2">
+              <p className="mb-1 flex items-center justify-between text-sm text-muted">
                 <span>Run history</span>
                 <span data-testid="history-count">{history.length} {history.length === 1 ? 'run' : 'runs'}</span>
               </p>
               <Sparkline history={history} />
-              <ol data-testid="metrics-history" className="mt-2 space-y-1 text-[10px]">
+              <ol data-testid="metrics-history" className="mt-2 space-y-1 text-xs">
                 {rows.map((run, index) => (
                   <li
                     key={history.length - index}

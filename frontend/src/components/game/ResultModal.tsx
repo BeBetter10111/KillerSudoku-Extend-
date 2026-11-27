@@ -1,4 +1,4 @@
-import { Cloud, Heart, Sun, Trophy } from 'lucide-react';
+import { Skull, Sun, Trophy } from 'lucide-react';
 import type { Difficulty, GameMode } from '../../types/game';
 import { formatPrecise } from '../../utils/formatTime';
 
@@ -9,8 +9,6 @@ interface ResultModalProps {
   mode: GameMode | null;
   difficulty: Difficulty | null;
   seed: string | null;
-  hp?: number;
-  maxHp?: number;
   onPlayAgain: () => void;
   onBackToDashboard: () => void;
 }
@@ -21,35 +19,6 @@ const LOSS_MESSAGES: Record<string, string> = {
   SESSION_EXPIRED: 'The session expired after two hours.',
 };
 
-const MAX_HEART_ICONS = 10;
-
-function HealthRemaining({ hp, maxHp }: { hp: number; maxHp: number }) {
-  if (maxHp <= 0) {
-    return <span>-</span>;
-  }
-  if (maxHp > MAX_HEART_ICONS) {
-    return (
-      <span className="flex items-center gap-1 font-mono">
-        <Heart className="h-4 w-4 fill-crimson text-ink" strokeWidth={1.5} aria-hidden="true" />
-        {hp}/{maxHp}
-      </span>
-    );
-  }
-  return (
-    <span className="flex items-center gap-1" aria-label={`${hp} of ${maxHp}`}>
-      {Array.from({ length: maxHp }, (_, index) => (
-        <Heart
-          key={index}
-          className={`h-4 w-4 ${index < hp ? 'fill-crimson text-ink' : 'fill-transparent text-ink'}`}
-          strokeWidth={1.5}
-          strokeDasharray={index < hp ? undefined : '2 2'}
-          aria-hidden="true"
-        />
-      ))}
-    </span>
-  );
-}
-
 export function ResultModal({
   won,
   reason,
@@ -57,73 +26,67 @@ export function ResultModal({
   mode,
   difficulty,
   seed,
-  hp = 0,
-  maxHp = 0,
   onPlayAgain,
   onBackToDashboard,
 }: ResultModalProps) {
   const isDaily = seed !== null && seed.startsWith('daily-');
-  const message = won
-    ? 'Every cage is solved.'
-    : (reason === 'HP_DEPLETED' && mode === 'CLASSIC' ? 'You ran out of lives.' : reason && LOSS_MESSAGES[reason]) ||
-      'The game ended.';
-  const difficultyLabel = difficulty ? difficulty.charAt(0) + difficulty.slice(1).toLowerCase() : '-';
-  const modeLabel = mode === 'BOT_CHALLENGE' ? 'Bot' : 'Killer';
+  const Icon = won ? Trophy : Skull;
+  const message = won ? 'Every cage is solved.' : (reason === 'HP_DEPLETED' && mode === 'CLASSIC' ? 'You ran out of lives.' : reason && LOSS_MESSAGES[reason]) || 'The game ended.';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pale-blush/70 p-4 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pale-blush/80 p-4 backdrop-blur-[2px]">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="result-title"
-        className="w-full max-w-sm rounded-2xl border-2 border-ink bg-white p-6 font-doodle text-ink shadow-doodle"
+        className="sketch-card w-full max-w-sm p-6 text-center shadow-sketch-lg"
       >
-        <div className="flex items-center justify-center gap-4" aria-hidden="true">
-          {won ? (
-            <>
-              <Sun className="h-8 w-8 fill-doodle-yellow text-ink" strokeWidth={1.5} />
-              <Trophy className="h-8 w-8 fill-doodle-yellow text-ink" strokeWidth={1.5} />
-            </>
-          ) : (
-            <Cloud className="h-10 w-10 fill-doodle-sky text-ink" strokeWidth={1.5} />
-          )}
+        <div className="flex items-center justify-center gap-3">
+          <Sun className="h-9 w-9 fill-doodle-yellow text-ink" strokeWidth={1.75} aria-hidden="true" />
+          <Icon
+            className={`h-10 w-10 text-ink ${won ? 'fill-doodle-yellow' : 'fill-dusty-rose'}`}
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
         </div>
-        <h2 id="result-title" className="mt-3 text-center font-hand text-4xl">
-          {won ? 'You Win!' : 'Game Over'}
+        <h2 id="result-title" className="mt-3 text-4xl font-bold text-ink">
+          {won ? 'Puzzle solved!' : 'Game over'}
         </h2>
-        <p className="mt-1 text-center text-xs text-muted">{message}</p>
+        <p className="mt-1 text-muted">{message}</p>
 
-        <dl className="mt-5 text-xs">
-          <div className="flex items-center justify-between border-b border-dashed border-dusty-rose py-2.5">
+        <dl className="mt-5 divide-y divide-dashed divide-ink/30 text-left">
+          <div className="flex items-center justify-between py-2">
             <dt className="text-muted">Time Taken</dt>
-            <dd className="font-mono font-bold tabular-nums">{formatPrecise(finalTimeMs)}</dd>
+            <dd className="font-mono text-lg font-bold tabular-nums">{formatPrecise(finalTimeMs)}</dd>
           </div>
-          <div className="flex items-center justify-between border-b border-dashed border-dusty-rose py-2.5">
-            <dt className="text-muted">Health Remaining</dt>
-            <dd>
-              <HealthRemaining hp={hp} maxHp={maxHp} />
-            </dd>
-          </div>
-          <div className="flex items-center justify-between py-2.5">
+          <div className="flex items-center justify-between py-2">
             <dt className="text-muted">Difficulty / Mode</dt>
-            <dd>
-              {difficultyLabel} • {modeLabel}
+            <dd className="font-bold">
+              {difficulty ?? ''} · {mode === 'BOT_CHALLENGE' ? 'Bot' : 'Classic'}
             </dd>
           </div>
         </dl>
-
         {won && isDaily && (
-          <p className="mt-2 text-center text-[11px] text-cage-purple">
+          <p className="mt-3 text-sm text-muted">
             Daily run: the server verifies your replay before it appears on the leaderboard.
           </p>
         )}
-        {won && <p className="mt-1 text-center text-[11px] text-muted">Time includes +5s for each wrong answer.</p>}
+        {won && <p className="mt-1 text-sm text-muted">Time includes +5s for each wrong answer.</p>}
 
-        <div className="mt-5 flex flex-col gap-3">
-          <button type="button" autoFocus onClick={onPlayAgain} className="btn-doodle bg-lavender px-4 py-2.5 text-sm">
+        <div className="mt-6 flex flex-col gap-3">
+          <button
+            type="button"
+            autoFocus
+            onClick={onPlayAgain}
+            className="sketch-btn-primary px-4 py-2.5"
+          >
             Play Again
           </button>
-          <button type="button" onClick={onBackToDashboard} className="btn-doodle px-4 py-2.5 text-sm">
+          <button
+            type="button"
+            onClick={onBackToDashboard}
+            className="sketch-btn px-4 py-2.5"
+          >
             Back to Dashboard
           </button>
         </div>

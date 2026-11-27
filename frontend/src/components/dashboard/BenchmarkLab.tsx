@@ -42,63 +42,39 @@ function barWidth(value: number, peak: number): string {
   return `${Math.max(MIN_BAR_PERCENT, (value / peak) * 100)}%`;
 }
 
-function comparison(row: MetricRow): string {
-  const { naive, optimized } = row;
-  if (!(naive > 0) && !(optimized > 0)) {
-    return '-';
-  }
-  if (row.key === 'p50' || row.key === 'p95') {
-    const speedup = formatSpeedup(naive, optimized);
-    return speedup === 'n/a' ? speedup : `${speedup} faster`;
-  }
-  if (optimized < naive) {
-    return `${formatPercent((1 - optimized / naive) * 100)} fewer`;
-  }
-  if (optimized > naive) {
-    return naive > 0 ? `${formatSpeedup(optimized, naive)} more` : 'only optimized';
-  }
-  return 'same';
-}
-
-function MiniBar({ value, peak, tone, testId }: { value: number; peak: number; tone: string; testId: string }) {
+function Bar({ value, peak, text, tone, testId }: { value: number; peak: number; text: string; tone: string; testId: string }) {
   return (
-    <div className="mt-1 h-2 w-full max-w-[9rem] overflow-hidden rounded-full border border-ink/70 bg-white">
-      <div data-testid={testId} className={`h-full rounded-full ${tone}`} style={{ width: barWidth(value, peak) }} />
+    <div className="flex items-center gap-2">
+      <div className="h-4 flex-1 overflow-hidden rounded-full border-[1.5px] border-ink bg-white">
+        <div data-testid={testId} className={`h-full rounded-full border-r-[1.5px] border-ink ${tone}`} style={{ width: barWidth(value, peak) }} />
+      </div>
+      <span className="w-24 shrink-0 text-right font-mono text-xs tabular-nums text-ink">{text}</span>
     </div>
   );
 }
 
-function HeroBar({ label, value, peak, text, tone }: { label: string; value: number; peak: number; text: string; tone: string }) {
+function StatsCard({ title, subtitle, stats, tone }: { title: string; subtitle: string; stats: StrategyBenchmarkStats; tone: string }) {
   return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
-        <span>{label}</span>
-        <span className="font-mono tabular-nums">{text}</span>
-      </div>
-      <div className="h-6 overflow-hidden rounded-lg border-2 border-ink bg-white p-0.5">
-        <div className={`h-full rounded-md border border-ink/60 ${tone}`} style={{ width: barWidth(value, peak) }} />
-      </div>
-    </div>
-  );
-}
-
-function StatsCard({ title, subtitle, stats }: { title: string; subtitle: string; stats: StrategyBenchmarkStats }) {
-  return (
-    <div data-testid={`card-${stats.strategy}`} className="rounded-xl border-2 border-ink bg-white p-3">
-      <h3 className="font-hand text-lg leading-tight">{title}</h3>
-      <p className="mb-2 text-[11px] text-muted">{subtitle}</p>
+    <div data-testid={`card-${stats.strategy}`} className="sketch-panel p-3">
+      <h3 className="text-lg font-bold text-ink">{title}</h3>
+      <p className="mb-2 text-sm text-muted">{subtitle}</p>
       <dl className="grid grid-cols-2 gap-1.5 text-xs">
-        {[
-          ['p50', formatMillis(stats.p50LatencyMs)],
-          ['p95', formatMillis(stats.p95LatencyMs)],
-          ['Avg nodes', formatCount(stats.avgNodesVisited)],
-          ['Peak RAM', formatMemory(stats.peakMemoryBytes)],
-        ].map(([term, value]) => (
-          <div key={term} className="rounded-md bg-pale-blush px-2 py-1">
-            <dt className="text-muted">{term}</dt>
-            <dd className="font-mono">{value}</dd>
-          </div>
-        ))}
+        <div className="rounded-md bg-pale-blush px-2 py-1">
+          <dt className="text-muted">p50</dt>
+          <dd className={`font-mono font-semibold ${tone}`}>{formatMillis(stats.p50LatencyMs)}</dd>
+        </div>
+        <div className="rounded-md bg-pale-blush px-2 py-1">
+          <dt className="text-muted">p95</dt>
+          <dd className={`font-mono font-semibold ${tone}`}>{formatMillis(stats.p95LatencyMs)}</dd>
+        </div>
+        <div className="rounded-md bg-pale-blush px-2 py-1">
+          <dt className="text-muted">Avg nodes</dt>
+          <dd className={`font-mono font-semibold ${tone}`}>{formatCount(stats.avgNodesVisited)}</dd>
+        </div>
+        <div className="rounded-md bg-pale-blush px-2 py-1">
+          <dt className="text-muted">Peak RAM</dt>
+          <dd className={`font-mono font-semibold ${tone}`}>{formatMemory(stats.peakMemoryBytes)}</dd>
+        </div>
       </dl>
     </div>
   );
@@ -109,8 +85,10 @@ function Correctness({ result }: { result: BenchmarkResultDTO }) {
   return (
     <div
       data-testid="correctness"
-      className={`flex flex-wrap items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm ${
-        perfect ? 'border-ink bg-lavender/40 text-ink' : 'border-crimson bg-blush text-crimson'
+      className={`flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${
+        perfect
+          ? 'border-[1.5px] border-ink bg-blush text-ink'
+          : 'border-[1.5px] border-crimson bg-pale-blush text-crimson'
       }`}
     >
       {perfect ? (
@@ -123,7 +101,7 @@ function Correctness({ result }: { result: BenchmarkResultDTO }) {
           ? `Correctness verified: ${formatPercent(result.oracleAgreementPercent, 0)} match with the oracle`
           : `Correctness mismatch: only ${formatPercent(result.oracleAgreementPercent)} agreement with the oracle`}
       </span>
-      <span className="text-xs opacity-80">
+      <span className="text-xs font-normal opacity-80">
         {result.comparedCount} compared
         {result.inconclusiveCount > 0 ? `, ${result.inconclusiveCount} inconclusive (oracle budget)` : ''}
       </span>
@@ -133,110 +111,78 @@ function Correctness({ result }: { result: BenchmarkResultDTO }) {
 
 function ResultView({ result, wallMs }: { result: BenchmarkResultDTO; wallMs: number | null }) {
   const rows = metricRows(result);
-  const heroPeak = Math.max(result.naive.p50LatencyMs, result.optimized.p50LatencyMs);
   return (
-    <div data-testid="benchmark-result" className="card-doodle flex flex-col gap-5 p-4 sm:p-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b-2 border-dashed border-dusty-rose pb-3">
-        <h3 className="font-hand text-xl sm:text-2xl">Naive Backtracking vs Optimized Backtracking</h3>
-        <span className="text-xs text-muted">
-          {result.difficulty.charAt(0) + result.difficulty.slice(1).toLowerCase()} • {result.batchSize} puzzles • 9x9 Killer
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <HeroBar
-          label="Naive Backtracking (p50)"
-          value={result.naive.p50LatencyMs}
-          peak={heroPeak}
-          text={`${formatMillis(result.naive.p50LatencyMs)} • ${formatCount(result.naive.avgNodesVisited)} nodes`}
-          tone="bg-blush"
-        />
-        <HeroBar
-          label="Optimized Backtracking (MRV + Cage Pruning)"
-          value={result.optimized.p50LatencyMs}
-          peak={heroPeak}
-          text={`${formatMillis(result.optimized.p50LatencyMs)} • ${formatCount(result.optimized.avgNodesVisited)} nodes`}
-          tone="bg-lavender"
-        />
-      </div>
-
-      <div className="overflow-x-auto rounded-xl border-2 border-ink">
-        <table className="w-full min-w-[520px] text-left text-xs">
-          <thead className="border-b-2 border-ink text-[11px] text-muted">
-            <tr>
-              <th scope="col" className="px-3 py-2 font-normal">Metric</th>
-              <th scope="col" className="px-3 py-2 font-normal">Naive Backtracking</th>
-              <th scope="col" className="px-3 py-2 font-normal">Optimized Backtracking</th>
-              <th scope="col" className="px-3 py-2 text-right font-normal">Comparison</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => {
-              const peak = Math.max(row.naive, row.optimized);
-              return (
-                <tr
-                  key={row.key}
-                  data-testid={`row-${row.key}`}
-                  className={`border-t border-dusty-rose ${index % 2 === 0 ? 'bg-blush' : 'bg-white'}`}
-                >
-                  <td className="px-3 py-2.5">{row.label}</td>
-                  <td className="px-3 py-2.5 font-mono">
-                    {row.format(row.naive)}
-                    <MiniBar value={row.naive} peak={peak} tone="bg-dusty-rose" testId={`bar-${row.key}-naive`} />
-                  </td>
-                  <td className="px-3 py-2.5 font-mono">
-                    {row.format(row.optimized)}
-                    <MiniBar value={row.optimized} peak={peak} tone="bg-lavender" testId={`bar-${row.key}-optimized`} />
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono">{comparison(row)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+    <div data-testid="benchmark-result" className="flex flex-col gap-4">
+      <Correctness result={result} />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          ['Node reduction', 'node-reduction', formatPercent(result.nodeReductionPercent)],
-          ['p50 speedup', 'speedup-p50', formatSpeedup(result.naive.p50LatencyMs, result.optimized.p50LatencyMs)],
-          ['p95 speedup', 'speedup-p95', formatSpeedup(result.naive.p95LatencyMs, result.optimized.p95LatencyMs)],
-        ].map(([title, testId, value]) => (
-          <div key={testId} className="rounded-xl border-2 border-ink bg-pale-blush p-3 text-center">
-            <p className="text-[11px] text-muted">{title}</p>
-            <p data-testid={testId} className="font-hand text-3xl">
-              {value}
-            </p>
-          </div>
-        ))}
+        <div className="sketch-panel bg-pale-blush p-3 text-center">
+          <p className="text-muted">Node reduction</p>
+          <p data-testid="node-reduction" className="font-mono text-2xl font-bold text-ink">
+            {formatPercent(result.nodeReductionPercent)}
+          </p>
+        </div>
+        <div className="sketch-panel bg-pale-blush p-3 text-center">
+          <p className="text-muted">p50 speedup</p>
+          <p data-testid="speedup-p50" className="font-mono text-2xl font-bold text-ink">
+            {formatSpeedup(result.naive.p50LatencyMs, result.optimized.p50LatencyMs)}
+          </p>
+        </div>
+        <div className="sketch-panel bg-pale-blush p-3 text-center">
+          <p className="text-muted">p95 speedup</p>
+          <p data-testid="speedup-p95" className="font-mono text-2xl font-bold text-ink">
+            {formatSpeedup(result.naive.p95LatencyMs, result.optimized.p95LatencyMs)}
+          </p>
+        </div>
       </div>
-
-      <Correctness result={result} />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <StatsCard
           title="NaiveBacktrackingSolver"
           subtitle="Reference oracle: row-major exhaustive backtracking"
           stats={result.naive}
+          tone="text-crimson"
         />
         <StatsCard
           title="OptimizedBacktrackingSolver"
           subtitle="MRV + forward checking + cage-sum pruning"
           stats={result.optimized}
+          tone="text-cage"
         />
       </div>
 
-      <p className="text-[11px] text-muted">
+      <div className="sketch-panel p-3">
+        <div className="mb-2 flex items-center gap-4 text-sm text-muted">
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded-sm border border-ink bg-dusty-rose" aria-hidden="true" /> Naive (oracle)
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded-sm border border-ink bg-lavender" aria-hidden="true" /> Optimized
+          </span>
+        </div>
+        <div className="flex flex-col gap-3">
+          {rows.map((row) => {
+            const peak = Math.max(row.naive, row.optimized);
+            return (
+              <div key={row.key} data-testid={`row-${row.key}`}>
+                <p className="mb-1 text-ink">{row.label}</p>
+                <div className="flex flex-col gap-1">
+                  <Bar value={row.naive} peak={peak} text={row.format(row.naive)} tone="bg-dusty-rose" testId={`bar-${row.key}-naive`} />
+                  <Bar value={row.optimized} peak={peak} text={row.format(row.optimized)} tone="bg-lavender" testId={`bar-${row.key}-optimized`} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="text-sm text-muted">
         {result.batchSize} {result.difficulty} puzzles (seed prefix "{result.seedPrefix}"), same puzzles for both solvers.
         {wallMs !== null ? ` Wall time ${(wallMs / 1000).toFixed(1)}s.` : ''}
       </p>
     </div>
   );
 }
-
-const PILL = 'rounded-full border-2 border-ink px-3 py-1 text-xs transition-colors disabled:opacity-50';
-const PILL_ON = 'bg-blush shadow-doodle-sm';
-const PILL_OFF = 'bg-white hover:bg-pale-blush';
 
 export function BenchmarkLab() {
   const [batchSize, setBatchSize] = useState<number>(BATCH_SIZES[0]);
@@ -284,49 +230,25 @@ export function BenchmarkLab() {
   const running = state === 'running';
 
   return (
-    <section aria-label="Algorithm Benchmark Lab" className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="flex items-center gap-2 font-hand text-3xl">
-          <FlaskConical className="h-6 w-6 text-cage-purple" aria-hidden="true" />
+    <section
+      aria-label="Algorithm Benchmark Lab"
+      className="sketch-card flex flex-col gap-5 p-4 sm:p-6"
+    >
+      <header>
+        <h2 className="flex items-center gap-2 text-3xl font-bold text-ink">
+          <FlaskConical className="h-6 w-6 text-cage" aria-hidden="true" />
           Algorithm Benchmark Lab
         </h2>
-        <button
-          type="button"
-          onClick={() => void run()}
-          disabled={running}
-          className="btn-doodle flex items-center justify-center gap-2 bg-lavender px-5 py-2 text-sm"
-        >
-          {running && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-          {running ? 'Running benchmark…' : 'Run benchmark'}
-        </button>
+        <p className="mt-1 text-muted">
+          Generates puzzles, solves each one with the naive oracle and the optimized solver, and checks that both
+          return the generated solution.
+        </p>
       </header>
-      <p className="-mt-2 text-xs leading-relaxed text-muted">
-        Generates puzzles, solves each one with the naive oracle and the optimized solver, and checks that both return
-        the generated solution.
-      </p>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">Difficulty</span>
-          <div role="radiogroup" aria-label="Benchmark difficulty" className="flex gap-2">
-            {DIFFICULTIES.map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={difficulty === value}
-                disabled={running}
-                onClick={() => setDifficulty(value)}
-                className={`${PILL} ${difficulty === value ? PILL_ON : PILL_OFF}`}
-              >
-                {value.charAt(0) + value.slice(1).toLowerCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">Batch</span>
-          <div role="radiogroup" aria-label="Batch size" className="flex gap-2">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <h3 className="mb-2 text-lg font-bold text-ink">Batch size</h3>
+          <div role="radiogroup" aria-label="Batch size" className="grid grid-cols-3 gap-2">
             {BATCH_SIZES.map((size) => (
               <button
                 key={size}
@@ -335,36 +257,71 @@ export function BenchmarkLab() {
                 aria-checked={batchSize === size}
                 disabled={running}
                 onClick={() => setBatchSize(size)}
-                className={`${PILL} font-mono ${batchSize === size ? PILL_ON : PILL_OFF}`}
+                className={`rounded-full border-2 px-3 py-1.5 font-mono text-sm font-bold transition-colors disabled:opacity-50 ${
+                  batchSize === size
+                    ? 'border-ink bg-blush shadow-sketch-sm'
+                    : 'border-ink/40 bg-white hover:border-ink'
+                }`}
               >
                 {size}
               </button>
             ))}
           </div>
         </div>
+        <div>
+          <h3 className="mb-2 text-lg font-bold text-ink">Difficulty</h3>
+          <div role="radiogroup" aria-label="Benchmark difficulty" className="grid grid-cols-3 gap-2">
+            {DIFFICULTIES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={difficulty === value}
+                disabled={running}
+                onClick={() => setDifficulty(value)}
+                className={`rounded-full border-2 px-3 py-1.5 font-bold transition-colors disabled:opacity-50 ${
+                  difficulty === value
+                    ? 'border-ink bg-blush shadow-sketch-sm'
+                    : 'border-ink/40 bg-white hover:border-ink'
+                }`}
+              >
+                {value.charAt(0) + value.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {running && (
-        <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={cancel} className="btn-doodle px-4 py-1.5 text-xs">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void run()}
+          disabled={running}
+          className="sketch-btn-primary flex items-center gap-2 px-5 py-2.5 text-lg"
+        >
+          {running && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
+          {running ? 'Running benchmark…' : 'Run benchmark'}
+        </button>
+        {running && (
+          <button
+            type="button"
+            onClick={cancel}
+            className="sketch-btn px-4 py-2.5"
+          >
             Stop waiting
           </button>
-          <p role="status" className="text-xs text-muted">
+        )}
+        {running && (
+          <p role="status" className="text-muted">
             {batchSize} {difficulty.toLowerCase()} puzzles can take up to ~25 s.
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {error !== null && (
-        <p role="alert" className="rounded-xl border-2 border-crimson bg-blush px-3 py-2 text-sm text-crimson">
+        <p role="alert" className="rounded-lg border-[1.5px] border-crimson bg-pale-blush px-3 py-2 text-crimson">
           {error}
         </p>
-      )}
-
-      {result === null && !running && error === null && (
-        <div className="card-doodle p-8 text-center text-sm text-muted">
-          Pick a difficulty and batch size, then press <span className="text-ink">Run benchmark</span>.
-        </div>
       )}
 
       {result !== null && <ResultView result={result} wallMs={wallMs} />}

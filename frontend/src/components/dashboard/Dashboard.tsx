@@ -1,4 +1,4 @@
-import { Bot, CalendarDays, Cpu, Grid3x3, Layers, Loader2, Play, Zap } from 'lucide-react';
+import { Bot, CalendarDays, Cpu, FlaskConical, Gamepad2, Grid3x3, Layers, Loader2, Play, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchDailySeed } from '../../services/apiClient';
 import {
@@ -8,7 +8,8 @@ import {
   type GameMode,
   type SolverStrategyType,
 } from '../../types/game';
-import { PageShell, type NavKey } from '../layout/AppShell';
+import { Doodles } from '../layout/Doodles';
+import { TopNav, navItemClass } from '../layout/TopNav';
 import { BenchmarkLab } from './BenchmarkLab';
 import { LeaderboardTable } from './LeaderboardTable';
 
@@ -24,7 +25,9 @@ interface DashboardProps {
   onStart: (setup: GameSetup) => void;
   isStarting: boolean;
   errorMessage: string | null;
-  initialTab?: NavKey;
+  /** Controlled tab; when omitted the dashboard keeps its own tab state. */
+  tab?: DashboardTab;
+  onTabChange?: (tab: DashboardTab) => void;
 }
 
 type BadgeTone = 'slate' | 'fuchsia' | 'amber';
@@ -35,15 +38,10 @@ interface ModifierBadge {
 }
 
 const BADGE_CLASSES: Record<BadgeTone, string> = {
-  slate: 'border-muted/40 bg-white text-muted',
-  fuchsia: 'border-cage-purple/60 bg-lavender/30 text-ink',
-  amber: 'border-crimson/50 bg-doodle-yellow/60 text-ink',
+  slate: 'border-ink/40 bg-white text-muted',
+  fuchsia: 'border-cage/60 bg-lavender/25 text-ink',
+  amber: 'border-amber-600 bg-doodle-yellow/70 text-ink',
 };
-
-const SECTION_TITLE = 'mb-3 font-hand text-lg text-muted';
-const OPTION = 'rounded-xl border-2 border-ink text-left transition-all';
-const OPTION_SELECTED = 'bg-lavender/60 shadow-doodle';
-const OPTION_IDLE = 'bg-white hover:bg-pale-blush';
 
 const MODES: ReadonlyArray<{ value: GameMode; title: string; description: string; Icon: typeof Grid3x3 }> = [
   {
@@ -62,6 +60,16 @@ const MODES: ReadonlyArray<{ value: GameMode; title: string; description: string
 
 const DIFFICULTIES: readonly Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
 
+export type DashboardTab = 'play' | 'benchmark';
+
+const TABS: ReadonlyArray<{ value: DashboardTab; title: string; short: string; Icon: typeof Gamepad2 }> = [
+  { value: 'play', title: 'Play Game', short: 'Play', Icon: Gamepad2 },
+  { value: 'benchmark', title: 'Algorithm Benchmark Lab', short: 'Benchmark Lab', Icon: FlaskConical },
+];
+
+const OPTION_BASE = 'rounded-xl border-2 text-left transition-[background-color,box-shadow,transform] duration-100';
+const OPTION_SELECTED = 'border-ink bg-pale-blush shadow-sketch';
+const OPTION_IDLE = 'border-ink/25 bg-white hover:border-ink/60 hover:bg-pale-blush/50';
 
 const SOLVER_ENGINES: ReadonlyArray<{
   value: SolverStrategyType;
@@ -139,10 +147,15 @@ function label(value: string): string {
   return value.charAt(0) + value.slice(1).toLowerCase();
 }
 
-export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'play' }: DashboardProps) {
+export function Dashboard({ onStart, isStarting, errorMessage, tab: controlledTab, onTabChange }: DashboardProps) {
   const [mode, setMode] = useState<GameMode>('CLASSIC');
   const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
-  const [tab, setTab] = useState<NavKey>(initialTab);
+  const [localTab, setLocalTab] = useState<DashboardTab>(controlledTab ?? 'play');
+  const tab = controlledTab ?? localTab;
+  const setTab = (next: DashboardTab): void => {
+    setLocalTab(next);
+    onTabChange?.(next);
+  };
   const [solverStrategy, setSolverStrategy] = useState<SolverStrategyType>(DEFAULT_SOLVER_STRATEGY);
   const [isDaily, setIsDaily] = useState(false);
   const [playerName, setPlayerName] = useState(loadPlayerName);
@@ -183,33 +196,42 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
   };
 
   return (
-    <PageShell active={tab} onNavigate={setTab} asTabs>
-      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:py-10">
+    <main className="relative min-h-screen bg-white text-ink">
+      <Doodles />
+      <TopNav>
+        <div role="tablist" aria-label="Dashboard sections" className="flex items-center gap-5">
+          {TABS.map(({ value, title, short, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              id={`tab-${value}`}
+              aria-label={title}
+              aria-selected={tab === value}
+              aria-controls={`panel-${value}`}
+              onClick={() => setTab(value)}
+              className={`flex items-center gap-1.5 ${navItemClass(tab === value)}`}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              {short}
+            </button>
+          ))}
+        </div>
+      </TopNav>
+      <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:py-8">
+        <p className="mx-auto w-fit rounded-xl border-[1.5px] border-ink bg-pale-blush px-4 py-2 text-center text-lg text-ink">
+          ☆ Server-authoritative single player. Pick a mode, beat the clock.
+        </p>
+
         <div id="panel-benchmark" role="tabpanel" aria-labelledby="tab-benchmark" hidden={tab !== 'benchmark'}>
           <BenchmarkLab />
         </div>
 
-        <div id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={tab !== 'dashboard'}>
-          {tab === 'dashboard' && (
-          <section className="card-doodle mx-auto max-w-2xl p-4 sm:p-6">
-            <LeaderboardTable mode={mode} difficulty={difficulty} />
-            <p className="mt-3 text-xs text-muted">
-              Showing {label(mode.replace('_', ' '))} / {label(difficulty)}. Only Daily Seed runs are ranked. Change the
-              mode and difficulty on the Play tab.
-            </p>
-          </section>
-          )}
-        </div>
-
         <div id="panel-play" role="tabpanel" aria-labelledby="tab-play" hidden={tab !== 'play'}>
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-2 border-b-2 border-dashed border-dusty-rose pb-3">
-            <h2 className="font-hand text-3xl">New Game</h2>
-            <p className="text-sm text-muted">Server-authoritative single player. Pick a mode, beat the clock.</p>
-          </div>
           <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-            <section className="card-doodle flex flex-col gap-6 p-4 sm:p-6">
+            <section className="sketch-card flex flex-col gap-6 p-4 sm:p-6">
               <div>
-                <h3 className={SECTION_TITLE}>Mode</h3>
+                <h2 className="mb-3 border-b border-dashed border-ink/30 pb-1 text-xl font-bold text-ink">Mode</h2>
                 <div role="radiogroup" aria-label="Game mode" className="grid gap-3 sm:grid-cols-2">
                   {MODES.map(({ value, title, description, Icon }) => {
                     const selected = mode === value;
@@ -220,13 +242,13 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
                         role="radio"
                         aria-checked={selected}
                         onClick={() => setMode(value)}
-                        className={`${OPTION} p-4 ${selected ? OPTION_SELECTED : OPTION_IDLE}`}
+                        className={`${OPTION_BASE} p-4 ${selected ? OPTION_SELECTED : OPTION_IDLE}`}
                       >
-                        <span className="flex items-center gap-2 font-hand text-xl">
-                          <Icon className="h-5 w-5 text-ink" aria-hidden="true" />
+                        <span className="flex items-center gap-2 text-lg font-bold">
+                          <Icon className={`h-5 w-5 ${selected ? 'text-cage' : 'text-muted'}`} aria-hidden="true" />
                           {title}
                         </span>
-                        <span className="mt-1 block text-xs leading-relaxed text-muted">{description}</span>
+                        <span className="mt-1 block text-muted">{description}</span>
                       </button>
                     );
                   })}
@@ -234,7 +256,7 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
               </div>
 
               <div>
-                <h3 className={SECTION_TITLE}>Difficulty</h3>
+                <h2 className="mb-3 border-b border-dashed border-ink/30 pb-1 text-xl font-bold text-ink">Difficulty</h2>
                 <div role="radiogroup" aria-label="Difficulty" className="grid gap-3 sm:grid-cols-3">
                   {DIFFICULTIES.map((value) => {
                     const selected = difficulty === value;
@@ -245,14 +267,14 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
                         role="radio"
                         aria-checked={selected}
                         onClick={() => setDifficulty(value)}
-                        className={`${OPTION} flex flex-col gap-2 p-3 ${selected ? OPTION_SELECTED : OPTION_IDLE}`}
+                        className={`${OPTION_BASE} flex flex-col gap-2 p-3 ${selected ? OPTION_SELECTED : OPTION_IDLE}`}
                       >
-                        <span className="font-hand text-xl">{label(value)}</span>
+                        <span className="text-lg font-bold">{label(value)}</span>
                         <span className="flex flex-wrap gap-1.5" data-testid={`badges-${value}`}>
                           {modifierBadges(mode, value).map((badge) => (
                             <span
                               key={badge.label}
-                              className={`rounded-full border px-2 py-0.5 text-[10px] leading-tight ${BADGE_CLASSES[badge.tone]}`}
+                              className={`rounded-full border px-2 py-0.5 text-xs leading-tight ${BADGE_CLASSES[badge.tone]}`}
                             >
                               {badge.label}
                             </span>
@@ -265,7 +287,7 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
               </div>
 
               <div>
-                <h3 className={SECTION_TITLE}>Solver Engine</h3>
+                <h2 className="mb-3 border-b border-dashed border-ink/30 pb-1 text-xl font-bold text-ink">Solver Engine</h2>
                 <div role="radiogroup" aria-label="Solver engine" className="grid gap-3 sm:grid-cols-2">
                   {SOLVER_ENGINES.map(({ value, title, description, Icon }) => {
                     const selected = (isDaily ? DEFAULT_SOLVER_STRATEGY : solverStrategy) === value;
@@ -277,38 +299,38 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
                         aria-checked={selected}
                         disabled={isDaily}
                         onClick={() => setSolverStrategy(value)}
-                        className={`${OPTION} p-3 disabled:cursor-not-allowed disabled:opacity-60 ${
-                          selected ? OPTION_SELECTED : OPTION_IDLE
+                        className={`${OPTION_BASE} p-3 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          selected ? 'border-ink bg-lavender/30 shadow-sketch' : OPTION_IDLE
                         }`}
                       >
-                        <span className="flex items-center gap-2 font-hand text-lg">
-                          <Icon className="h-4 w-4 text-ink" aria-hidden="true" />
+                        <span className="flex items-center gap-2 font-bold">
+                          <Icon className={`h-4 w-4 ${selected ? 'text-cage' : 'text-muted'}`} aria-hidden="true" />
                           {title}
                         </span>
-                        <span className="mt-1 block text-xs text-muted">{description}</span>
+                        <span className="mt-1 block text-sm text-muted">{description}</span>
                       </button>
                     );
                   })}
                 </div>
                 {isDaily && (
-                  <p data-testid="solver-locked" className="mt-2 text-xs text-muted">
+                  <p data-testid="solver-locked" className="mt-2 text-sm text-muted">
                     The Daily Seed Challenge always uses the Optimized engine so everyone gets the same puzzle.
                   </p>
                 )}
               </div>
 
-              <div className="rounded-xl border-2 border-dashed border-cage-purple/50 bg-pale-blush p-4">
+              <div className="rounded-xl border-2 border-dashed border-ink/40 bg-doodle-sky/40 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="flex items-center gap-2 font-hand text-xl">
-                      <CalendarDays className="h-5 w-5 text-cage-purple" aria-hidden="true" />
+                    <p className="flex items-center gap-2 text-lg font-bold">
+                      <CalendarDays className="h-5 w-5 text-ink" aria-hidden="true" />
                       Daily Seed Challenge
                     </p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted">
+                    <p className="mt-1 text-muted">
                       Everyone gets the same puzzle today. Wins are replay-verified by the server and ranked
                       (+5s per wrong answer).
                     </p>
-                    <p className="mt-1 font-mono text-xs text-muted/80" data-testid="daily-seed">
+                    <p className="mt-1 font-mono text-xs text-muted" data-testid="daily-seed">
                       {dailySeed ? dailySeed.seed : dailyUnavailable ? 'Daily seed unavailable' : 'Loading daily seed…'}
                     </p>
                   </div>
@@ -330,7 +352,7 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
                   </button>
                 </div>
                 {isDaily && (
-                  <label className="mt-4 block text-sm text-muted">
+                  <label className="mt-4 block text-ink">
                     Name on the leaderboard
                     <input
                       type="text"
@@ -338,14 +360,14 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
                       maxLength={MAX_PLAYER_NAME_LENGTH}
                       placeholder="Anonymous"
                       onChange={(event) => setPlayerName(event.target.value)}
-                      className="mt-1 w-full rounded-lg border-2 border-ink bg-white px-3 py-2 text-ink outline-none focus:border-cage-purple"
+                      className="mt-1 w-full rounded-lg border-2 border-ink bg-white px-3 py-2 text-ink outline-none focus:border-cage"
                     />
                   </label>
                 )}
               </div>
 
               {errorMessage && (
-                <p role="alert" className="rounded-xl border-2 border-crimson bg-blush px-3 py-2 text-sm text-crimson">
+                <p role="alert" className="rounded-lg border-[1.5px] border-crimson bg-pale-blush px-3 py-2 text-crimson">
                   {errorMessage}
                 </p>
               )}
@@ -354,7 +376,7 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
                 type="button"
                 onClick={handleStart}
                 disabled={!canStart}
-                className="btn-doodle flex items-center justify-center gap-2 bg-lavender px-6 py-3 text-base"
+                className="sketch-btn-primary flex items-center justify-center gap-2 px-6 py-3 text-xl"
               >
                 {isStarting ? (
                   <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -367,17 +389,15 @@ export function Dashboard({ onStart, isStarting, errorMessage, initialTab = 'pla
               </button>
             </section>
 
-            {tab === 'play' && (
-              <section className="card-doodle h-fit p-4 sm:p-6">
-                <LeaderboardTable mode={mode} difficulty={difficulty} />
-                <p className="mt-3 text-xs text-muted">
-                  Showing {label(mode.replace('_', ' '))} / {label(difficulty)}. Only Daily Seed runs are ranked.
-                </p>
-              </section>
-            )}
+            <section className="sketch-card h-fit p-4 sm:p-6">
+              <LeaderboardTable mode={mode} difficulty={difficulty} />
+              <p className="mt-3 text-sm text-muted">
+                Showing {label(mode.replace('_', ' '))} / {label(difficulty)}. Only Daily Seed runs are ranked.
+              </p>
+            </section>
           </div>
         </div>
-      </main>
-    </PageShell>
+      </div>
+    </main>
   );
 }

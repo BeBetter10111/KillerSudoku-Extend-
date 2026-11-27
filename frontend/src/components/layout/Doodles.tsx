@@ -1,101 +1,56 @@
-const INK = '#3d2c2e';
+const INK = '#432E2A';
 
 function Sun({ className }: { className: string }) {
-  const rays = Array.from({ length: 8 }, (_, index) => (index * Math.PI) / 4);
   return (
-    <svg viewBox="0 0 48 48" className={className}>
-      {rays.map((angle) => (
-        <line
-          key={angle}
-          x1={24 + Math.cos(angle) * 14}
-          y1={24 + Math.sin(angle) * 14}
-          x2={24 + Math.cos(angle) * 20}
-          y2={24 + Math.sin(angle) * 20}
-          stroke={INK}
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      ))}
-      <circle cx="24" cy="24" r="10" fill="#fde68a" stroke={INK} strokeWidth="2" />
-      <circle cx="20.5" cy="22" r="1.2" fill={INK} />
-      <circle cx="27.5" cy="22" r="1.2" fill={INK} />
-      <path d="M20 26.5 Q24 30 28 26.5" fill="none" stroke={INK} strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function Cloud({ className }: { className: string }) {
-  return (
-    <svg viewBox="0 0 64 40" className={className}>
-      <path
-        d="M14 34 H50 A9 9 0 0 0 50 16 A12 12 0 0 0 28 10 A10 10 0 0 0 12 20 A7 7 0 0 0 14 34 Z"
-        fill="#d8ecfb"
-        stroke={INK}
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
+    <svg viewBox="0 0 64 64" className={className} fill="none" stroke={INK} strokeWidth={2.5} strokeLinecap="round">
+      <circle cx="32" cy="32" r="12" fill="#FCE68A" />
+      <path d="M27 30h.01M37 30h.01" strokeWidth={3.5} />
+      <path d="M27 36q5 4 10 0" />
+      <path d="M32 6v8M32 50v8M6 32h8M50 32h8M13.6 13.6l5.6 5.6M44.8 44.8l5.6 5.6M13.6 50.4l5.6-5.6M44.8 19.2l5.6-5.6" />
     </svg>
   );
 }
 
 function Star({ className }: { className: string }) {
   return (
-    <svg viewBox="0 0 32 32" className={className}>
+    <svg viewBox="0 0 32 32" className={className} stroke={INK} strokeWidth={2} strokeLinejoin="round">
+      <path d="M16 3l3.8 8 8.7 1-6.4 6 1.7 8.6L16 22.3 8.2 26.6 9.9 18 3.5 12l8.7-1z" fill="#FCE68A" />
+    </svg>
+  );
+}
+
+function Cloud({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 80 44" className={className} stroke={INK} strokeWidth={2.25} strokeLinejoin="round">
       <path
-        d="M16 3 L19.6 11.6 L28.8 12.3 L21.8 18.3 L24 27.3 L16 22.4 L8 27.3 L10.2 18.3 L3.2 12.3 L12.4 11.6 Z"
-        fill="#fde68a"
-        stroke={INK}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
+        d="M18 38h46a12 12 0 0 0 0-24 16 16 0 0 0-30-4A11 11 0 0 0 18 18a10 10 0 0 0 0 20z"
+        fill="#D6EEFF"
       />
     </svg>
   );
 }
 
 function Flower({ className }: { className: string }) {
-  const petals = Array.from({ length: 6 }, (_, index) => (index * Math.PI) / 3);
   return (
-    <svg viewBox="0 0 32 32" className={className}>
-      {petals.map((angle) => (
-        <circle
-          key={angle}
-          cx={16 + Math.cos(angle) * 7}
-          cy={16 + Math.sin(angle) * 7}
-          r="4.6"
-          fill="#ffffff"
-          stroke={INK}
-          strokeWidth="1.6"
-        />
+    <svg viewBox="0 0 40 40" className={className} stroke={INK} strokeWidth={2}>
+      {[0, 60, 120, 180, 240, 300].map((angle) => (
+        <ellipse key={angle} cx="20" cy="10" rx="5.5" ry="7.5" fill="#FFFFFF" transform={`rotate(${angle} 20 20)`} />
       ))}
-      <circle cx="16" cy="16" r="4" fill="#f4c443" stroke={INK} strokeWidth="1.6" />
+      <circle cx="20" cy="20" r="5" fill="#FCE68A" />
     </svg>
   );
 }
 
-function Heart({ className }: { className: string }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className}>
-      <path
-        d="M16 27 C6 20 3.5 15 3.5 11 A6.5 6.5 0 0 1 16 8.5 A6.5 6.5 0 0 1 28.5 11 C28.5 15 26 20 16 27 Z"
-        fill="#ffe4e9"
-        stroke={INK}
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Hand-drawn decorations pinned to the page margins. Purely decorative. */
+/** Decorative hand-drawn doodles in the page margins (wide screens only). */
 export function Doodles() {
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 hidden overflow-hidden xl:block">
-      <Sun className="absolute left-6 top-24 h-12 w-12" />
-      <Cloud className="absolute right-8 top-24 h-12 w-[4.5rem]" />
-      <Star className="absolute left-12 top-[42%] h-7 w-7 -rotate-12" />
-      <Flower className="absolute right-12 top-[52%] h-8 w-8" />
-      <Cloud className="absolute bottom-8 left-6 h-10 w-16" />
-      <Heart className="absolute bottom-16 right-10 h-8 w-8 rotate-12" />
+      <Sun className="absolute left-8 top-24 h-14 w-14 animate-float motion-reduce:animate-none" />
+      <Star className="absolute left-12 top-60 h-7 w-7" />
+      <Cloud className="absolute right-10 top-28 h-12 w-20 animate-float motion-reduce:animate-none [animation-delay:1.5s]" />
+      <Flower className="absolute right-14 top-[55%] h-9 w-9" />
+      <Cloud className="absolute bottom-10 left-8 h-10 w-16" />
+      <Star className="absolute bottom-24 right-24 h-5 w-5" />
     </div>
   );
 }

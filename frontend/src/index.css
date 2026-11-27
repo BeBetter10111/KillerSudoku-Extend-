@@ -3,30 +3,61 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
   html,
   body {
-    background-color: #ffffff;
-    color: #432e2a;
-    font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+    @apply bg-white font-sans text-ink antialiased;
+  }
+
+  body {
+    font-size: 17px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+
+  ::selection {
+    @apply bg-lavender/60 text-ink;
   }
 }
 
 @layer components {
-  /* Hand-drawn style button: ink outline + hard offset shadow. */
-  .btn-doodle {
-    @apply rounded-xl border-2 border-ink bg-white font-doodle text-ink shadow-doodle transition-all duration-100 hover:-translate-y-px active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0;
+  /* White card with a hand-drawn ink outline and an offset shadow. */
+  .sketch-card {
+    @apply rounded-2xl border-2 border-ink bg-white shadow-sketch;
   }
-  .card-doodle {
-    @apply rounded-2xl border-2 border-ink bg-white shadow-doodle;
+
+  /* Lighter outlined panel for status chips and inner blocks. */
+  .sketch-panel {
+    @apply rounded-xl border-[1.5px] border-ink/80 bg-white;
   }
-  .pill-doodle {
-    @apply inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-white px-3 py-1 font-doodle text-xs text-ink;
+
+  .sketch-btn {
+    @apply rounded-xl border-2 border-ink bg-white font-bold text-ink shadow-sketch transition-[transform,box-shadow,background-color] duration-100
+      hover:bg-pale-blush
+      active:translate-x-[2px] active:translate-y-[2px] active:shadow-none
+      disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:active:translate-x-0 disabled:active:translate-y-0;
   }
-  .nav-active {
-    text-decoration-line: underline;
-    text-decoration-style: wavy;
-    text-decoration-color: #8e6bc4;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 6px;
+
+  .sketch-btn-primary {
+    @apply sketch-btn bg-lavender hover:bg-[#B39BD6];
+  }
+
+  .sketch-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-ink bg-white px-3 py-1 text-sm font-semibold text-ink;
+  }
+
+  .squiggle {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='6' viewBox='0 0 16 6'%3E%3Cpath d='M0 3 Q4 0 8 3 T16 3' fill='none' stroke='%238E6BC4' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+    background-size: 16px 6px;
+    padding-bottom: 6px;
   }
 }

@@ -1,5 +1,5 @@
 import { Eraser, Pencil } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { submitCell } from '../../services/socketClient';
 import { useGameStore } from '../../store/useGameStore';
 import { CageOverlay } from './CageOverlay';
@@ -91,7 +91,7 @@ function highlightFor(row: number, col: number, value: number, selected: { row: 
   return selected.row === row || selected.col === col || sameBox ? 'peer' : 'none';
 }
 
-function Numpad() {
+export function Numpad() {
   const grid = useGameStore((state) => state.grid);
   const notesMode = useGameStore((state) => state.notesMode);
   const toggleNotesMode = useGameStore((state) => state.toggleNotesMode);
@@ -110,29 +110,29 @@ function Numpad() {
   }, [grid]);
 
   return (
-    <div className="flex flex-col gap-2" data-testid="numpad">
-      <div className="grid grid-cols-9 gap-1.5 sm:grid-cols-3 sm:gap-2.5">
+    <div className="flex flex-col gap-3" data-testid="numpad">
+      <div className="grid grid-cols-9 gap-1.5 sm:grid-cols-3 sm:gap-3">
         {DIGITS.map((digit) => (
           <button
             key={digit}
             type="button"
             disabled={placedCounts[digit] >= GRID_SIZE}
             onClick={() => enterDigit(digit)}
-            className={`btn-doodle aspect-[3/4] font-hand text-xl sm:aspect-[2/1] sm:text-3xl ${
-              notesMode ? 'bg-doodle-yellow/70 text-muted' : 'hover:bg-pale-blush'
+            className={`sketch-btn py-2 text-2xl font-normal sm:py-3 sm:text-3xl ${
+              notesMode ? 'bg-doodle-yellow/60 text-muted hover:bg-doodle-yellow' : ''
             }`}
           >
             {digit}
           </button>
         ))}
       </div>
-      <div className="mt-1 grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           aria-pressed={notesMode}
           onClick={toggleNotesMode}
-          className={`btn-doodle flex items-center justify-center gap-2 px-3 py-2 text-xs ${
-            notesMode ? 'bg-doodle-yellow' : ''
+          className={`sketch-btn flex items-center justify-center gap-2 px-3 py-2 ${
+            notesMode ? 'bg-doodle-yellow hover:bg-doodle-yellow' : ''
           }`}
         >
           <Pencil className="h-4 w-4" aria-hidden="true" />
@@ -141,7 +141,7 @@ function Numpad() {
         <button
           type="button"
           onClick={clearNotes}
-          className="btn-doodle flex items-center justify-center gap-2 px-3 py-2 text-xs"
+          className="sketch-btn flex items-center justify-center gap-2 px-3 py-2"
         >
           <Eraser className="h-4 w-4" aria-hidden="true" />
           Erase notes
@@ -151,7 +151,7 @@ function Numpad() {
   );
 }
 
-export function SudokuBoard({ className = '', sidebar }: { className?: string; sidebar?: ReactNode }) {
+export function SudokuBoard({ className = '', showNumpad = true }: { className?: string; showNumpad?: boolean }) {
   const grid = useGameStore((state) => state.grid);
   const selectedCell = useGameStore((state) => state.selectedCell);
   const notes = useGameStore((state) => state.notes);
@@ -174,11 +174,11 @@ export function SudokuBoard({ className = '', sidebar }: { className?: string; s
   const selectedValue = selectedCell ? grid[selectedCell.row][selectedCell.col].currentValue : 0;
 
   return (
-    <div className={`flex w-full flex-col items-center gap-5 lg:flex-row lg:items-start lg:justify-center ${className}`}>
+    <div className={`flex w-full max-w-[560px] flex-col gap-4 ${className}`}>
       <div
         role="group"
         aria-label="Killer Sudoku board"
-        className="relative aspect-square w-full max-w-[560px] touch-manipulation overflow-hidden rounded-2xl border-[3px] border-ink bg-white shadow-doodle"
+        className="relative aspect-square w-full touch-manipulation overflow-hidden rounded-xl border-[3px] border-ink bg-white shadow-sketch"
       >
         <div className="grid h-full w-full grid-cols-9 grid-rows-9">
           {grid.map((line) =>
@@ -206,10 +206,7 @@ export function SudokuBoard({ className = '', sidebar }: { className?: string; s
         </div>
         <CageOverlay />
       </div>
-      <div className="flex w-full max-w-[560px] flex-col gap-5 lg:w-80 lg:shrink-0">
-        <Numpad />
-        {sidebar}
-      </div>
+      {showNumpad && <Numpad />}
     </div>
   );
 }

@@ -15,11 +15,13 @@ export function ReshapeTimer() {
       data-testid="reshape-timer"
       role="timer"
       aria-label="Time until the cage layout reshapes"
-      className="pill-doodle"
+      className="sketch-panel flex w-full items-center justify-between px-3 py-2 font-semibold text-ink sm:col-span-2"
     >
-      <Shuffle className="h-4 w-4" aria-hidden="true" />
-      <span>Reshape:</span>
-      <span data-testid="reshape-timer-value" className="font-mono tabular-nums">
+      <span className="flex items-center gap-1.5">
+        <Shuffle className="h-4 w-4" aria-hidden="true" />
+        Cages reshape in
+      </span>
+      <span data-testid="reshape-timer-value" className="sketch-pill py-0 font-mono tabular-nums">
         {formatClock(Math.ceil(remainingMs / 1000) * 1000)}
       </span>
     </div>
