@@ -29,7 +29,7 @@ export const CageOverlay = memo(function CageOverlay() {
             strokeWidth={isAlertActive ? 4 : 2.5}
             data-alert={isAlertActive}
             className={
-              isAlertActive ? 'animate-cage-alert stroke-amber-400 motion-reduce:animate-none' : 'stroke-cage/70'
+              isAlertActive ? 'stroke-crimson/70' : 'stroke-cage/70'
             }
           />
         ))}

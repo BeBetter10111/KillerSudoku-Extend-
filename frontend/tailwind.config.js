@@ -8,6 +8,7 @@ const palette = {
   error: '#B81D24',
   blush: '#FDE2E6',
   cage: '#8E6BC4',
+  'cage-purple': '#8E6BC4',
   'doodle-sky': '#D6EEFF',
   'doodle-yellow': '#FCE68A',
   'dusty-rose': '#F3C4CB',

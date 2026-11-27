@@ -1,4 +1,4 @@
-import { Clock3, LogOut } from 'lucide-react';
+import { Clock3, Save } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dashboard, type DashboardTab, type GameSetup } from './components/dashboard/Dashboard';
 import { Numpad, SudokuBoard } from './components/board/SudokuBoard';
@@ -9,8 +9,13 @@ import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePan
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
 import { ReshapeTimer } from './components/status/ReshapeTimer';
-import { connectAndStartGame, leaveGame } from './services/socketClient';
+import { AuthPage } from './components/auth/AuthPage';
+import { ApiError, discardActiveGame, fetchMe, logOut } from './services/apiClient';
+import { connectAndResumeGame, connectAndStartGame, leaveGame, saveAndExit } from './services/socketClient';
+import { useAuthStore } from './store/useAuthStore';
 import { useGameStore } from './store/useGameStore';
+import type { ActiveGame, Progress } from './types/game';
+import { emptyProgress } from './utils/progression';
 import { formatClock } from './utils/formatTime';
 
 const START_TIMEOUT_MS = 10_000;
@@ -64,13 +69,55 @@ function StartingScreen() {
   );
 }
 
+interface Profile {
+  progress: Progress;
+  activeGame: ActiveGame | null;
+}
+
 export default function App() {
+  const token = useAuthStore((state) => state.token);
+  if (token === null) {
+    return <AuthPage />;
+  }
+  return <Game token={token} />;
+}
+
+function Game({ token }: { token: string }) {
+  const username = useAuthStore((state) => state.username);
   const gameStatus = useGameStore((state) => state.gameStatus);
   const storeError = useGameStore((state) => state.errorMessage);
   const [startKind, setStartKind] = useState<StartKind>('idle');
   const [startError, setStartError] = useState<string | null>(null);
   const [dashboardTab, setDashboardTab] = useState<DashboardTab>('play');
   const lastSetup = useRef<GameSetup | null>(null);
+  const [profile, setProfile] = useState<Profile>({ progress: emptyProgress(), activeGame: null });
+
+  const signOut = useCallback(async () => {
+    await logOut(token);
+    useGameStore.getState().resetGame();
+    useAuthStore.getState().clearSession();
+  }, [token]);
+
+  useEffect(() => {
+    if (gameStatus !== 'IDLE') {
+      return undefined;
+    }
+    let cancelled = false;
+    fetchMe(token)
+      .then((me) => {
+        if (!cancelled) {
+          setProfile({ progress: me.progress, activeGame: me.activeGame });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled && error instanceof ApiError && error.status === 401) {
+          useAuthStore.getState().clearSession();
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, gameStatus, startKind]);
 
   const startGame = useCallback(async (setup: GameSetup, kind: Exclude<StartKind, 'idle'>) => {
     lastSetup.current = setup;
@@ -90,6 +137,32 @@ export default function App() {
       setStartKind('idle');
     }
   }, []);
+
+  const continueGame = useCallback(async () => {
+    const saved = profile.activeGame;
+    if (!saved) {
+      return;
+    }
+    lastSetup.current = { mode: saved.mode, difficulty: saved.difficulty, solverStrategy: saved.solverStrategy };
+    useGameStore.getState().resetGame();
+    setStartError(null);
+    setStartKind('fresh');
+    try {
+      await connectAndResumeGame(saved.solverStrategy);
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : 'Could not continue the game.');
+      setStartKind('idle');
+    }
+  }, [profile.activeGame]);
+
+  const discardSavedGame = useCallback(async () => {
+    try {
+      await discardActiveGame(token);
+      setProfile((current) => ({ ...current, activeGame: null }));
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : 'Could not discard the saved game.');
+    }
+  }, [token]);
 
   useEffect(() => {
     if (startKind === 'idle') {
@@ -113,21 +186,27 @@ export default function App() {
     setStartError(null);
   }, []);
 
-  const quit = useCallback(() => {
-    if (window.confirm('Leave this game? Your progress will be lost.')) {
-      void backToDashboard();
-    }
-  }, [backToDashboard]);
+  const exitToDashboard = useCallback(
+    (tab: DashboardTab) => {
+      if (useGameStore.getState().gameStatus !== 'PLAYING') {
+        setDashboardTab(tab);
+        void backToDashboard();
+        return;
+      }
+      if (window.confirm('Save and exit? You can continue this game later from the dashboard.')) {
+        setDashboardTab(tab);
+        void (async () => {
+          await saveAndExit();
+          useGameStore.getState().resetGame();
+          setStartError(null);
+        })();
+      }
+    },
+    [backToDashboard],
+  );
 
-  const openBenchmarkLab = useCallback(() => {
-    if (
-      useGameStore.getState().gameStatus !== 'PLAYING' ||
-      window.confirm('Leave this game? Your progress will be lost.')
-    ) {
-      setDashboardTab('benchmark');
-      void backToDashboard();
-    }
-  }, [backToDashboard]);
+  const quit = useCallback(() => exitToDashboard('play'), [exitToDashboard]);
+  const openBenchmarkLab = useCallback(() => exitToDashboard('benchmark'), [exitToDashboard]);
 
   const playAgain = useCallback(() => {
     if (lastSetup.current) {
@@ -146,6 +225,12 @@ export default function App() {
         errorMessage={startError ?? storeError}
         tab={dashboardTab}
         onTabChange={setDashboardTab}
+        username={username}
+        progress={profile.progress}
+        activeGame={profile.activeGame}
+        onContinue={() => void continueGame()}
+        onDiscardActiveGame={() => void discardSavedGame()}
+        onLogout={() => void signOut()}
       />
     );
   }
@@ -223,8 +308,8 @@ function ArenaHeader({ onQuit }: { onQuit: () => void }) {
           onClick={onQuit}
           className="sketch-btn flex items-center gap-1.5 px-3 py-1 text-sm"
         >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          Quit
+          <Save className="h-4 w-4" aria-hidden="true" />
+          Save &amp; Exit
         </button>
       ) : (
         <span className="w-[72px]" aria-hidden="true" />

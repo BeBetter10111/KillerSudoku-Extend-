@@ -117,7 +117,7 @@ export const Cell = memo(function Cell({
         {value !== 0 && (
           <span
             className={`text-2xl leading-none sm:text-[2rem] ${
-              given ? 'text-slate-100' : wrong ? 'font-bold text-red-400 line-through decoration-2' : 'text-sky-300'
+              given ? 'text-ink' : wrong ? 'font-bold text-crimson line-through decoration-2' : 'text-cage-purple'
             }`}
           >
             {value}

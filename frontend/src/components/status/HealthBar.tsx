@@ -5,9 +5,9 @@ import { useGameStore } from '../../store/useGameStore';
 const HIT_ANIMATION_MS = 600;
 
 const TONES = {
-  emerald: { fill: 'bg-emerald-500', text: 'text-emerald-300' },
-  amber: { fill: 'bg-amber-500', text: 'text-amber-300' },
-  rose: { fill: 'bg-rose-500', text: 'text-rose-300' },
+  emerald: { fill: 'bg-crimson', text: 'text-crimson' },
+  amber: { fill: 'bg-[#E0782E]', text: 'text-[#B85A17]' },
+  rose: { fill: 'bg-[#7A1016]', text: 'text-[#7A1016]' },
 } as const;
 
 function toneFor(ratio: number): keyof typeof TONES {

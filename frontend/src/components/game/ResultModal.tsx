@@ -50,7 +50,7 @@ export function ResultModal({
           />
         </div>
         <h2 id="result-title" className="mt-3 text-4xl font-bold text-ink">
-          {won ? 'Puzzle solved!' : 'Game over'}
+          {won ? 'You Win!' : 'Game Over'}
         </h2>
         <p className="mt-1 text-muted">{message}</p>
 

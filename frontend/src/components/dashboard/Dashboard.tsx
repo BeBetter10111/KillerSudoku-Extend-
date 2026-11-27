@@ -1,13 +1,32 @@
-import { Bot, CalendarDays, Cpu, FlaskConical, Gamepad2, Grid3x3, Layers, Loader2, Play, Zap } from 'lucide-react';
+import {
+  Bot,
+  CalendarDays,
+  Cpu,
+  FlaskConical,
+  Gamepad2,
+  Grid3x3,
+  Layers,
+  Loader2,
+  Lock,
+  LogOut,
+  Play,
+  RotateCcw,
+  Save,
+  UserRound,
+  Zap,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchDailySeed } from '../../services/apiClient';
 import {
   DEFAULT_SOLVER_STRATEGY,
+  type ActiveGame,
   type DailySeedResponse,
   type Difficulty,
   type GameMode,
+  type Progress,
   type SolverStrategyType,
 } from '../../types/game';
+import { emptyProgress, isUnlocked, lockReason } from '../../utils/progression';
 import { Doodles } from '../layout/Doodles';
 import { TopNav, navItemClass } from '../layout/TopNav';
 import { BenchmarkLab } from './BenchmarkLab';
@@ -28,6 +47,12 @@ interface DashboardProps {
   /** Controlled tab; when omitted the dashboard keeps its own tab state. */
   tab?: DashboardTab;
   onTabChange?: (tab: DashboardTab) => void;
+  username?: string | null;
+  progress?: Progress;
+  activeGame?: ActiveGame | null;
+  onContinue?: () => void;
+  onDiscardActiveGame?: () => void;
+  onLogout?: () => void;
 }
 
 type BadgeTone = 'slate' | 'fuchsia' | 'amber';
@@ -147,9 +172,28 @@ function label(value: string): string {
   return value.charAt(0) + value.slice(1).toLowerCase();
 }
 
-export function Dashboard({ onStart, isStarting, errorMessage, tab: controlledTab, onTabChange }: DashboardProps) {
+function formatElapsed(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+const DEFAULT_PROGRESS = emptyProgress();
+
+export function Dashboard({
+  onStart,
+  isStarting,
+  errorMessage,
+  tab: controlledTab,
+  onTabChange,
+  username = null,
+  progress = DEFAULT_PROGRESS,
+  activeGame = null,
+  onContinue,
+  onDiscardActiveGame,
+  onLogout,
+}: DashboardProps) {
   const [mode, setMode] = useState<GameMode>('CLASSIC');
-  const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
+  const [difficulty, setDifficulty] = useState<Difficulty>('EASY');
   const [localTab, setLocalTab] = useState<DashboardTab>(controlledTab ?? 'play');
   const tab = controlledTab ?? localTab;
   const setTab = (next: DashboardTab): void => {
@@ -174,7 +218,8 @@ export function Dashboard({ onStart, isStarting, errorMessage, tab: controlledTa
     return () => controller.abort();
   }, []);
 
-  const canStart = !isStarting && (!isDaily || dailySeed !== null);
+  const levelUnlocked = isUnlocked(progress, mode, difficulty);
+  const canStart = !isStarting && levelUnlocked && (!isDaily || dailySeed !== null);
 
   const handleStart = (): void => {
     if (!canStart) {
@@ -200,13 +245,12 @@ export function Dashboard({ onStart, isStarting, errorMessage, tab: controlledTa
       <Doodles />
       <TopNav>
         <div role="tablist" aria-label="Dashboard sections" className="flex items-center gap-5">
-          {TABS.map(({ value, title, short, Icon }) => (
+          {TABS.map(({ value, short, Icon }) => (
             <button
               key={value}
               type="button"
               role="tab"
               id={`tab-${value}`}
-              aria-label={title}
               aria-selected={tab === value}
               aria-controls={`panel-${value}`}
               onClick={() => setTab(value)}
@@ -219,9 +263,65 @@ export function Dashboard({ onStart, isStarting, errorMessage, tab: controlledTa
         </div>
       </TopNav>
       <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 sm:py-8">
-        <p className="mx-auto w-fit rounded-xl border-[1.5px] border-ink bg-pale-blush px-4 py-2 text-center text-lg text-ink">
-          ☆ Server-authoritative single player. Pick a mode, beat the clock.
-        </p>
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+          <p className="w-fit rounded-xl border-[1.5px] border-ink bg-pale-blush px-4 py-2 text-center text-lg text-ink">
+            ☆ Server-authoritative single player. Pick a mode, beat the clock.
+          </p>
+          {username && (
+            <div className="flex items-center gap-3">
+              <span data-testid="signed-in-as" className="sketch-pill bg-doodle-sky/60">
+                <UserRound className="h-4 w-4" aria-hidden="true" />
+                Signed in as <strong className="font-bold">{username}</strong>
+              </span>
+              <button type="button" onClick={onLogout} className="sketch-btn flex items-center gap-1.5 px-3 py-1.5">
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Log out
+              </button>
+            </div>
+          )}
+        </div>
+
+        {activeGame && (
+          <section
+            aria-label="Game in progress"
+            className="sketch-card flex flex-col gap-3 bg-doodle-yellow/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-3">
+              <Save className="mt-1 h-6 w-6 shrink-0 text-ink" aria-hidden="true" />
+              <div>
+                <p className="font-display text-2xl font-bold text-ink">Game in progress</p>
+                <p className="text-muted" data-testid="active-game-summary">
+                  {label(activeGame.mode.replace('_', ' '))} / {label(activeGame.difficulty)} ·{' '}
+                  {formatElapsed(activeGame.elapsedMs)} played
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={onContinue}
+                disabled={isStarting}
+                className="sketch-btn-primary flex items-center gap-2 px-4 py-2"
+              >
+                <Play className="h-4 w-4" aria-hidden="true" />
+                Continue playing
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Discard your saved game and start a new one?')) {
+                    onDiscardActiveGame?.();
+                  }
+                }}
+                disabled={isStarting}
+                className="sketch-btn flex items-center gap-2 px-4 py-2"
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Start new game
+              </button>
+            </div>
+          </section>
+        )}
 
         <div id="panel-benchmark" role="tabpanel" aria-labelledby="tab-benchmark" hidden={tab !== 'benchmark'}>
           <BenchmarkLab />
@@ -241,7 +341,12 @@ export function Dashboard({ onStart, isStarting, errorMessage, tab: controlledTa
                         type="button"
                         role="radio"
                         aria-checked={selected}
-                        onClick={() => setMode(value)}
+                        onClick={() => {
+                          setMode(value);
+                          if (!isUnlocked(progress, value, difficulty)) {
+                            setDifficulty('EASY');
+                          }
+                        }}
                         className={`${OPTION_BASE} p-4 ${selected ? OPTION_SELECTED : OPTION_IDLE}`}
                       >
                         <span className="flex items-center gap-2 text-lg font-bold">
@@ -260,16 +365,37 @@ export function Dashboard({ onStart, isStarting, errorMessage, tab: controlledTa
                 <div role="radiogroup" aria-label="Difficulty" className="grid gap-3 sm:grid-cols-3">
                   {DIFFICULTIES.map((value) => {
                     const selected = difficulty === value;
+                    const locked = lockReason(progress, mode, value);
                     return (
                       <button
                         key={value}
                         type="button"
                         role="radio"
                         aria-checked={selected}
-                        onClick={() => setDifficulty(value)}
-                        className={`${OPTION_BASE} flex flex-col gap-2 p-3 ${selected ? OPTION_SELECTED : OPTION_IDLE}`}
+                        aria-disabled={locked !== null}
+                        title={locked ?? undefined}
+                        onClick={() => {
+                          if (locked === null) {
+                            setDifficulty(value);
+                          }
+                        }}
+                        className={`${OPTION_BASE} flex flex-col gap-2 p-3 ${
+                          locked !== null
+                            ? 'cursor-not-allowed border-dashed border-ink/30 bg-pale-blush/60 text-muted'
+                            : selected
+                              ? OPTION_SELECTED
+                              : OPTION_IDLE
+                        }`}
                       >
-                        <span className="text-lg font-bold">{label(value)}</span>
+                        <span className="flex items-center gap-1.5 text-lg font-bold">
+                          {locked !== null && <Lock className="h-4 w-4 text-muted" aria-hidden="true" />}
+                          {label(value)}
+                        </span>
+                        {locked !== null && (
+                          <span data-testid={`lock-${value}`} className="text-sm text-muted">
+                            {locked}
+                          </span>
+                        )}
                         <span className="flex flex-wrap gap-1.5" data-testid={`badges-${value}`}>
                           {modifierBadges(mode, value).map((badge) => (
                             <span

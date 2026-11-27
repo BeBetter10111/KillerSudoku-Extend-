@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchDailySeed, fetchLeaderboard } from '../../services/apiClient';
-import type { LeaderboardEntry } from '../../types/game';
+import type { LeaderboardEntry, Progress } from '../../types/game';
 import { Dashboard, modifierBadges } from './Dashboard';
 
 vi.mock('../../services/apiClient', () => ({
@@ -16,6 +16,11 @@ const entries: LeaderboardEntry[] = [
   { playerName: 'Frog', finalTimeMs: 90_250, mode: 'CLASSIC', difficulty: 'MEDIUM', date: '2026-11-15', completedAt: '2026-11-15T10:00:00Z' },
   { playerName: 'Toad', finalTimeMs: 125_000, mode: 'CLASSIC', difficulty: 'MEDIUM', date: '2026-11-15', completedAt: '2026-11-15T10:05:00Z' },
 ];
+
+const ALL_UNLOCKED: Progress = {
+  CLASSIC: { EASY: 3, MEDIUM: 5, HARD: 0 },
+  BOT_CHALLENGE: { EASY: 3, MEDIUM: 5, HARD: 0 },
+};
 
 const radio = (name: RegExp | string) => screen.getByRole('radio', { name });
 
@@ -55,9 +60,9 @@ describe('modifierBadges', () => {
 describe('Dashboard', () => {
   it('starts a classic game with the chosen difficulty and no seed', () => {
     const onStart = vi.fn();
-    render(<Dashboard onStart={onStart} isStarting={false} errorMessage={null} />);
+    render(<Dashboard onStart={onStart} isStarting={false} errorMessage={null} progress={ALL_UNLOCKED} />);
 
-    fireEvent.click(radio(/Hard/));
+    fireEvent.click(radio(/^Hard/));
     fireEvent.click(screen.getByRole('button', { name: /Start game/ }));
 
     expect(onStart).toHaveBeenCalledWith({ mode: 'CLASSIC', difficulty: 'HARD', solverStrategy: 'OPTIMIZED_MRV_PRUNING' });
@@ -76,11 +81,11 @@ describe('Dashboard', () => {
 
   it('starts the daily seed challenge with the server seed and a trimmed name', async () => {
     const onStart = vi.fn();
-    render(<Dashboard onStart={onStart} isStarting={false} errorMessage={null} />);
+    render(<Dashboard onStart={onStart} isStarting={false} errorMessage={null} progress={ALL_UNLOCKED} />);
     await waitFor(() => expect(screen.getByTestId('daily-seed').textContent).toBe('daily-2026-11-15'));
 
     fireEvent.click(radio(/Bot Challenge/));
-    fireEvent.click(radio(/Medium/));
+    fireEvent.click(radio(/^Medium/));
     fireEvent.click(screen.getByRole('switch', { name: 'Daily Seed Challenge' }));
     fireEvent.change(screen.getByLabelText(/Name on the leaderboard/), { target: { value: '  Mr Frog ' } });
     fireEvent.click(screen.getByRole('button', { name: /Start Daily Challenge/ }));
@@ -116,6 +121,50 @@ describe('Dashboard', () => {
     expect(screen.getByText('Cannot reach the game server')).toBeTruthy();
   });
 
+  it('locks Medium and Hard until the previous level has been played enough', () => {
+    const onStart = vi.fn();
+    render(<Dashboard onStart={onStart} isStarting={false} errorMessage={null} />);
+    expect(radio(/^Easy/).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByTestId('lock-MEDIUM').textContent).toBe('Play Easy 0/3 times to unlock');
+    expect(screen.getByTestId('lock-HARD').textContent).toBe('Play Medium 0/5 times to unlock');
+
+    fireEvent.click(radio(/^Medium/));
+    expect(radio(/^Easy/).getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: /Start game/ }));
+    expect(onStart).toHaveBeenCalledWith({ mode: 'CLASSIC', difficulty: 'EASY', solverStrategy: 'OPTIMIZED_MRV_PRUNING' });
+  });
+
+  it('unlocks Medium after 3 Easy plays but keeps Hard locked until 5 Medium plays', () => {
+    const progress: Progress = {
+      CLASSIC: { EASY: 3, MEDIUM: 4, HARD: 0 },
+      BOT_CHALLENGE: { EASY: 0, MEDIUM: 0, HARD: 0 },
+    };
+    render(<Dashboard onStart={vi.fn()} isStarting={false} errorMessage={null} progress={progress} />);
+    expect(screen.queryByTestId('lock-MEDIUM')).toBeNull();
+    expect(screen.getByTestId('lock-HARD').textContent).toBe('Play Medium 4/5 times to unlock');
+    fireEvent.click(radio(/^Medium/));
+    expect(radio(/^Medium/).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('tracks progression separately for each mode', () => {
+    const progress: Progress = {
+      CLASSIC: { EASY: 3, MEDIUM: 0, HARD: 0 },
+      BOT_CHALLENGE: { EASY: 0, MEDIUM: 0, HARD: 0 },
+    };
+    render(<Dashboard onStart={vi.fn()} isStarting={false} errorMessage={null} progress={progress} />);
+    expect(screen.queryByTestId('lock-MEDIUM')).toBeNull();
+    fireEvent.click(radio(/Bot Challenge/));
+    expect(screen.getByTestId('lock-MEDIUM')).toBeTruthy();
+  });
+
+  it('shows who is signed in and lets them log out', () => {
+    const onLogout = vi.fn();
+    render(<Dashboard onStart={vi.fn()} isStarting={false} errorMessage={null} username="frog" onLogout={onLogout} />);
+    expect(screen.getByTestId('signed-in-as').textContent).toContain('frog');
+    fireEvent.click(screen.getByRole('button', { name: /Log out/ }));
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
   it('remembers the player name between visits', () => {
     window.localStorage.setItem('killer-sudoku:player-name', 'Frog');
     render(<Dashboard onStart={vi.fn()} isStarting={false} errorMessage={null} />);
@@ -126,7 +175,7 @@ describe('Dashboard', () => {
 
 describe('Leaderboard', () => {
   it('lists verified runs for the selected mode and difficulty and refetches on change', async () => {
-    render(<Dashboard onStart={vi.fn()} isStarting={false} errorMessage={null} />);
+    render(<Dashboard onStart={vi.fn()} isStarting={false} errorMessage={null} progress={ALL_UNLOCKED} />);
 
     const table = await screen.findByRole('table');
     const rows = within(table).getAllByRole('row');
@@ -135,12 +184,12 @@ describe('Leaderboard', () => {
     expect(within(rows[1]).getByText('01:30.2')).toBeTruthy();
     expect(within(rows[2]).getByText('02:05.0')).toBeTruthy();
     expect(fetchLeaderboard).toHaveBeenLastCalledWith(
-      { mode: 'CLASSIC', difficulty: 'MEDIUM', limit: 10 },
+      { mode: 'CLASSIC', difficulty: 'EASY', limit: 10 },
       expect.any(AbortSignal),
     );
 
     fireEvent.click(radio(/Bot Challenge/));
-    fireEvent.click(radio(/Hard/));
+    fireEvent.click(radio(/^Hard/));
     await waitFor(() =>
       expect(fetchLeaderboard).toHaveBeenLastCalledWith(
         { mode: 'BOT_CHALLENGE', difficulty: 'HARD', limit: 10 },
@@ -171,7 +220,7 @@ describe('Leaderboard', () => {
     expect(radio(/Naive Oracle/).getAttribute('aria-checked')).toBe('true');
     fireEvent.click(screen.getByRole('button', { name: /Start game/ }));
 
-    expect(onStart).toHaveBeenCalledWith({ mode: 'CLASSIC', difficulty: 'MEDIUM', solverStrategy: 'NAIVE_ORACLE' });
+    expect(onStart).toHaveBeenCalledWith({ mode: 'CLASSIC', difficulty: 'EASY', solverStrategy: 'NAIVE_ORACLE' });
   });
 
   it('forces the optimized engine for the daily challenge and says why', async () => {
