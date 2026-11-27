@@ -1,4 +1,5 @@
 import { Client, type IMessage } from '@stomp/stompjs';
+import { useAuthStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/useGameStore';
 import type {
   Difficulty,
@@ -67,12 +68,22 @@ export function connectAndStartGame(
   seed?: string,
   playerName?: string,
 ): Promise<string> {
+  const authToken = useAuthStore.getState().token ?? undefined;
+  return openGame({ mode, difficulty, seed, playerName, solverStrategy, authToken }, solverStrategy);
+}
+
+/** Continues the player's saved game; the server restores mode, difficulty and seed from the save. */
+export function connectAndResumeGame(solverStrategy: SolverStrategyType): Promise<string> {
+  const authToken = useAuthStore.getState().token ?? undefined;
+  return openGame({ resume: true, authToken }, solverStrategy);
+}
+
+function openGame(request: Partial<StartGameRequest>, solverStrategy: SolverStrategyType): Promise<string> {
   return disconnect().then(() => {
     useGameStore.getState().resetGame();
     useGameStore.setState({ solverStrategy });
 
     const sessionId = newSessionId();
-    const request: StartGameRequest = { mode, difficulty, seed, playerName, solverStrategy };
     const thisAttempt = ++attempt;
     const isCurrent = (): boolean => attempt === thisAttempt;
 
@@ -157,6 +168,20 @@ export async function leaveGame(): Promise<void> {
     useGameStore.getState().gameStatus === 'PLAYING'
   ) {
     client.publish({ destination: `/app/game/${activeSessionId}/forfeit`, body: '' });
+    await new Promise<void>((resolve) => setTimeout(resolve, FORFEIT_FLUSH_MS));
+  }
+  await disconnect();
+}
+
+/** Save & exit: the server keeps the game so it can be continued from the dashboard. */
+export async function saveAndExit(): Promise<void> {
+  if (
+    client !== null &&
+    client.connected &&
+    activeSessionId !== null &&
+    useGameStore.getState().gameStatus === 'PLAYING'
+  ) {
+    client.publish({ destination: `/app/game/${activeSessionId}/pause`, body: '' });
     await new Promise<void>((resolve) => setTimeout(resolve, FORFEIT_FLUSH_MS));
   }
   await disconnect();

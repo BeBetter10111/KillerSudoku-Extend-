@@ -1,17 +1,25 @@
 server:
   port: 8080
-  # Render (and other PaaS) terminate TLS at a proxy; trust X-Forwarded-* so same-origin
-  # https requests are not mistaken for cross-origin ones (CORS 403 on POST).
-  forward-headers-strategy: framework
+  error:
+    include-message: always
 
 spring:
   application:
     name: killer-sudoku-backend
+  # Postgres in docker compose (SPRING_DATASOURCE_*); a local H2 file database when nothing is configured.
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/killer-sudoku;MODE=PostgreSQL}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
 
 app:
   cors:
     allowed-origins: http://localhost:5173,http://127.0.0.1:5173
-    allowed-methods: GET,POST,OPTIONS
+    allowed-methods: GET,POST,DELETE,OPTIONS
 
 game:
   reshape-interval-ms: 0

@@ -40,6 +40,17 @@ layout is found the server retries after 5 s. To see a reshape quickly, start th
 everyone the same puzzle. A win is replayed on a fresh seeded session by `ServerReplayValidator`
 (every move, timestamp and the final time must match) before it is stored in the in-memory leaderboard.
 
+## Accounts, progress and saved games
+
+Players sign up / log in (username + password, BCrypt-hashed; the API returns a bearer token). The server stores, per
+player and per mode, how many times each difficulty was played, and enforces the unlock rule: **Medium needs 3 Easy
+plays, Hard needs 5 Medium plays**. One unfinished game per player is saved (seed + move log + clock, autosaved every 5 s
+and on *Save & Exit* / disconnect) and can be continued from the dashboard, or discarded to start a new game.
+
+Data lives in PostgreSQL under docker compose (`db` service, volume `postgres-data`; override with `POSTGRES_USER` /
+`POSTGRES_PASSWORD`). Without `SPRING_DATASOURCE_URL` the backend falls back to a local H2 file (`./data`).
+Endpoints: `POST /api/auth/signup|login|logout`, `GET /api/me`, `DELETE /api/game/active`.
+
 ## Run it
 
 ### Docker (recommended)

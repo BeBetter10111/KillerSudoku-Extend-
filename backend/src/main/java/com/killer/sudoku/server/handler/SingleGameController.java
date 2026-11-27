@@ -4,7 +4,11 @@ import com.killer.sudoku.core.GameSession;
 import com.killer.sudoku.core.GameSessionFactory;
 import com.killer.sudoku.model.Position;
 import com.killer.sudoku.model.SolverStrategyType;
+import com.killer.sudoku.server.account.AccountService;
+import com.killer.sudoku.server.account.ProgressService;
+import com.killer.sudoku.server.account.SavedGameService;
 import com.killer.sudoku.server.leaderboard.DailyLeaderboard;
+import com.killer.sudoku.server.persistence.UserAccount;
 import com.killer.sudoku.server.listener.WebSocketEventListener;
 import com.killer.sudoku.server.protocol.GameEventMessage;
 import com.killer.sudoku.server.protocol.GameEventType;
@@ -20,7 +24,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -37,10 +45,9 @@ public class SingleGameController {
 
     private static final Pattern SESSION_ID = Pattern.compile("[A-Za-z0-9_-]{8,64}");
     private static final int MAX_SEED_LENGTH = 64;
-    private static final int MAX_PLAYER_NAME_LENGTH = 20;
-    private static final String DEFAULT_PLAYER_NAME = "Anonymous";
     private static final int MAX_ACTIVE_SESSIONS = 500;
     private static final long MAX_GAME_DURATION_MS = 2 * 60 * 60 * 1000L;
+    private static final int AUTOSAVE_EVERY_TICKS = 20;
     private static final String REASON_SESSION_EXPIRED = "SESSION_EXPIRED";
 
     private final ConcurrentHashMap<String, GameSession> sessions = new ConcurrentHashMap<>();
@@ -48,12 +55,24 @@ public class SingleGameController {
     private final SimpMessagingTemplate messagingTemplate;
     private final DailyLeaderboard leaderboard;
     private final ServerReplayValidator replayValidator;
+    private final AccountService accounts;
+    private final ProgressService progress;
+    private final SavedGameService savedGames;
+    private final ConcurrentHashMap<String, Long> owners = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> gameByConnection = new ConcurrentHashMap<>();
+    private long tickCount;
 
     public SingleGameController(
             GameSessionFactory sessionFactory,
             SimpMessagingTemplate messagingTemplate,
             DailyLeaderboard leaderboard,
-            ServerReplayValidator replayValidator) {
+            ServerReplayValidator replayValidator,
+            AccountService accounts,
+            ProgressService progress,
+            SavedGameService savedGames) {
+        this.accounts = accounts;
+        this.progress = progress;
+        this.savedGames = savedGames;
         this.sessionFactory = sessionFactory;
         this.messagingTemplate = messagingTemplate;
         this.leaderboard = leaderboard;
@@ -66,13 +85,19 @@ public class SingleGameController {
             log.warn("Rejected start with malformed session id");
             return;
         }
-        if (request == null || request.mode() == null || request.difficulty() == null) {
+        if (request == null) {
             sendError(sessionId, "mode and difficulty are required");
             return;
         }
-        String seed = resolveSeed(request.seed());
-        if (seed.length() > MAX_SEED_LENGTH) {
-            sendError(sessionId, "seed is too long");
+        Optional<UserAccount> user = accounts.authenticate(request.authToken());
+        if (user.isEmpty()) {
+            sendError(sessionId, "Please log in to play");
+            return;
+        }
+        Long userId = user.get().getId();
+        boolean resume = Boolean.TRUE.equals(request.resume());
+        if (!resume && (request.mode() == null || request.difficulty() == null)) {
+            sendError(sessionId, "mode and difficulty are required");
             return;
         }
         if (sessions.containsKey(sessionId)) {
@@ -83,20 +108,51 @@ public class SingleGameController {
             sendError(sessionId, "Server is busy, try again later");
             return;
         }
-        SolverStrategyType strategy =
-                resolveStrategy(request.solverStrategy(), leaderboard.dailyDateOf(seed).isPresent());
-        GameSession session = sessionFactory.create(
-                sessionId, request.mode(), request.difficulty(), strategy, seed,
-                sanitizePlayerName(request.playerName()));
+        // A player has one live game: an older tab or a dropped connection must not keep running beside the new one.
+        dropLiveSessionsOf(userId);
+
+        GameSession session;
+        if (resume) {
+            Optional<GameSession> restored = savedGames.restore(userId, sessionId, user.get().getUsername());
+            if (restored.isEmpty()) {
+                savedGames.delete(userId);
+                sendError(sessionId, "There is no saved game to continue");
+                return;
+            }
+            session = restored.get();
+        } else {
+            String seed = resolveSeed(request.seed());
+            if (seed.length() > MAX_SEED_LENGTH) {
+                sendError(sessionId, "seed is too long");
+                return;
+            }
+            if (!progress.isUnlocked(userId, request.mode(), request.difficulty())) {
+                sendError(sessionId, "That difficulty is still locked. Play the previous level more times first.");
+                return;
+            }
+            SolverStrategyType strategy =
+                    resolveStrategy(request.solverStrategy(), leaderboard.dailyDateOf(seed).isPresent());
+            session = sessionFactory.create(
+                    sessionId, request.mode(), request.difficulty(), strategy, seed, user.get().getUsername());
+        }
         if (sessions.putIfAbsent(sessionId, session) != null) {
             sendError(sessionId, "Session already exists");
             return;
         }
+        owners.put(sessionId, userId);
         try {
-            session.addListener(new WebSocketEventListener(sessionId, messagingTemplate));
-            session.start();
+            WebSocketEventListener listener = new WebSocketEventListener(sessionId, messagingTemplate);
+            session.addListener(listener);
+            if (resume) {
+                listener.onInitState(session, session.getLatestMetrics().orElse(null));
+            } else {
+                session.start();
+                progress.recordPlay(userId, session.getGameMode(), session.getDifficulty());
+                savedGames.save(userId, session);
+            }
         } catch (RuntimeException e) {
             sessions.remove(sessionId, session);
+            owners.remove(sessionId);
             throw e;
         }
     }
@@ -115,6 +171,7 @@ public class SingleGameController {
         }
         try {
             session.submitValue(new Position(request.row(), request.col()), request.value());
+            saveIfRunning(sessionId, session);
         } catch (IllegalArgumentException e) {
             sendError(sessionId, "Invalid cell position");
         }
@@ -128,6 +185,41 @@ public class SingleGameController {
         }
     }
 
+    /** Save & exit: keep the game so the player can continue it later. */
+    @MessageMapping("/game/{sessionId}/pause")
+    public void pause(@DestinationVariable("sessionId") String sessionId) {
+        GameSession session = sessions.get(sessionId);
+        if (session == null) {
+            return;
+        }
+        if (session.isFinished()) {
+            return;
+        }
+        saveIfRunning(sessionId, session);
+        sessions.remove(sessionId, session);
+        owners.remove(sessionId);
+    }
+
+    @EventListener
+    public void onSubscribe(SessionSubscribeEvent event) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        String destination = accessor.getDestination();
+        String connection = accessor.getSessionId();
+        String prefix = WebSocketEventListener.destination("");
+        if (destination != null && connection != null && destination.startsWith(prefix)) {
+            gameByConnection.put(connection, destination.substring(prefix.length()));
+        }
+    }
+
+    /** A closed tab must not leave the game running (and the bot draining HP): save it so it can be continued. */
+    @EventListener
+    public void onDisconnect(SessionDisconnectEvent event) {
+        String sessionId = gameByConnection.remove(event.getSessionId());
+        if (sessionId != null) {
+            pause(sessionId);
+        }
+    }
+
     @MessageExceptionHandler
     public void handleMessageException(Exception exception) {
         log.warn("Failed to handle game message", exception);
@@ -135,6 +227,7 @@ public class SingleGameController {
 
     @Scheduled(fixedRate = GameSession.TICK_MS)
     public void tickActiveSessions() {
+        boolean autosave = ++tickCount % AUTOSAVE_EVERY_TICKS == 0;
         for (Map.Entry<String, GameSession> entry : sessions.entrySet()) {
             GameSession session = entry.getValue();
             try {
@@ -144,12 +237,51 @@ public class SingleGameController {
                 }
                 if (session.isFinished()) {
                     sessions.remove(entry.getKey(), session);
+                    Long owner = owners.remove(entry.getKey());
+                    if (owner != null) {
+                        savedGames.delete(owner);
+                    }
                     recordResult(session);
+                } else if (autosave) {
+                    saveIfRunning(entry.getKey(), session);
                 }
             } catch (RuntimeException e) {
                 log.error("Session {} failed and was dropped", entry.getKey(), e);
                 sessions.remove(entry.getKey(), session);
+                owners.remove(entry.getKey());
             }
+        }
+    }
+
+    private void saveIfRunning(String sessionId, GameSession session) {
+        Long owner = owners.get(sessionId);
+        if (owner == null || session.isFinished()) {
+            return;
+        }
+        try {
+            savedGames.save(owner, session);
+        } catch (RuntimeException e) {
+            log.warn("Could not save game of session {}", sessionId, e);
+        }
+    }
+
+    private void dropLiveSessionsOf(Long userId) {
+        for (Map.Entry<String, Long> entry : owners.entrySet()) {
+            if (userId.equals(entry.getValue())) {
+                GameSession old = sessions.remove(entry.getKey());
+                owners.remove(entry.getKey());
+                if (old != null) {
+                    saveIfRunningQuietly(userId, old);
+                }
+            }
+        }
+    }
+
+    private void saveIfRunningQuietly(Long userId, GameSession session) {
+        try {
+            savedGames.save(userId, session);
+        } catch (RuntimeException e) {
+            log.warn("Could not save replaced game", e);
         }
     }
 
@@ -188,16 +320,5 @@ public class SingleGameController {
             return UUID.randomUUID().toString();
         }
         return requested.trim();
-    }
-
-    private static String sanitizePlayerName(String name) {
-        if (name == null) {
-            return DEFAULT_PLAYER_NAME;
-        }
-        String cleaned = name.replaceAll("\\p{Cntrl}", "").trim();
-        if (cleaned.isEmpty()) {
-            return DEFAULT_PLAYER_NAME;
-        }
-        return cleaned.length() > MAX_PLAYER_NAME_LENGTH ? cleaned.substring(0, MAX_PLAYER_NAME_LENGTH) : cleaned;
     }
 }

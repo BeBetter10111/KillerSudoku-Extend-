@@ -3,15 +3,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dashboard, type GameSetup } from './components/dashboard/Dashboard';
 import { SudokuBoard } from './components/board/SudokuBoard';
 import { ResultModal } from './components/game/ResultModal';
-import { AppHeader, navLinkClass } from './components/layout/AppHeader';
-import { Doodles } from './components/layout/Doodles';
 import { AlgorithmEvidencePanel } from './components/status/AlgorithmEvidencePanel';
 import { BotTimer } from './components/status/BotTimer';
 import { HealthBar } from './components/status/HealthBar';
 import { ReshapeTimer } from './components/status/ReshapeTimer';
-import { connectAndStartGame, leaveGame } from './services/socketClient';
+import { AuthPage } from './components/auth/AuthPage';
+import { ApiError, discardActiveGame, fetchMe, logOut } from './services/apiClient';
+import { connectAndResumeGame, connectAndStartGame, leaveGame, saveAndExit } from './services/socketClient';
+import { useAuthStore } from './store/useAuthStore';
+import type { ActiveGame, Progress } from './types/game';
 import { useGameStore } from './store/useGameStore';
 import { formatClock } from './utils/formatTime';
+import { emptyProgress } from './utils/progression';
 
 const START_TIMEOUT_MS = 10_000;
 
@@ -23,9 +26,9 @@ function GameClock() {
     <span
       role="timer"
       aria-label="Elapsed time"
-      className="flex items-center gap-1.5 font-mono text-2xl font-bold tabular-nums text-ink"
+      className="flex items-center gap-1.5 font-mono text-xl font-bold tabular-nums text-slate-100"
     >
-      <Clock3 className="h-5 w-5 rounded-full bg-sunny-300 text-ink" aria-hidden="true" />
+      <Clock3 className="h-5 w-5 text-slate-400" aria-hidden="true" />
       {formatClock(elapsedMs)}
     </span>
   );
@@ -38,8 +41,6 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
   const mode = useGameStore((state) => state.mode);
   const difficulty = useGameStore((state) => state.difficulty);
   const seed = useGameStore((state) => state.seed);
-  const hp = useGameStore((state) => state.hp);
-  const maxHp = useGameStore((state) => state.maxHp);
 
   return (
     <ResultModal
@@ -49,8 +50,6 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
       mode={mode}
       difficulty={difficulty}
       seed={seed}
-      hp={hp}
-      maxHp={maxHp}
       onPlayAgain={onPlayAgain}
       onBackToDashboard={onBackToDashboard}
     />
@@ -59,20 +58,62 @@ function ConnectedResultModal({ onPlayAgain, onBackToDashboard }: { onPlayAgain:
 
 function StartingScreen() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-paper text-ink-soft">
-      <p role="status" className="sketch-card animate-pulse px-6 py-4 text-2xl">
+    <main className="flex min-h-screen items-center justify-center bg-slate-900 text-slate-300">
+      <p role="status" className="animate-pulse text-lg">
         Starting a new game…
       </p>
     </main>
   );
 }
 
+interface Profile {
+  progress: Progress;
+  activeGame: ActiveGame | null;
+}
+
 export default function App() {
+  const token = useAuthStore((state) => state.token);
+  if (token === null) {
+    return <AuthPage />;
+  }
+  return <Game token={token} />;
+}
+
+function Game({ token }: { token: string }) {
+  const username = useAuthStore((state) => state.username);
   const gameStatus = useGameStore((state) => state.gameStatus);
   const storeError = useGameStore((state) => state.errorMessage);
   const [startKind, setStartKind] = useState<StartKind>('idle');
   const [startError, setStartError] = useState<string | null>(null);
   const lastSetup = useRef<GameSetup | null>(null);
+  const [profile, setProfile] = useState<Profile>({ progress: emptyProgress(), activeGame: null });
+
+  const signOut = useCallback(async () => {
+    await logOut(token);
+    useGameStore.getState().resetGame();
+    useAuthStore.getState().clearSession();
+  }, [token]);
+
+  useEffect(() => {
+    if (gameStatus !== 'IDLE') {
+      return undefined;
+    }
+    let cancelled = false;
+    fetchMe(token)
+      .then((me) => {
+        if (!cancelled) {
+          setProfile({ progress: me.progress, activeGame: me.activeGame });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled && error instanceof ApiError && error.status === 401) {
+          useAuthStore.getState().clearSession();
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, gameStatus, startKind]);
 
   const startGame = useCallback(async (setup: GameSetup, kind: Exclude<StartKind, 'idle'>) => {
     lastSetup.current = setup;
@@ -92,6 +133,32 @@ export default function App() {
       setStartKind('idle');
     }
   }, []);
+
+  const continueGame = useCallback(async () => {
+    const saved = profile.activeGame;
+    if (!saved) {
+      return;
+    }
+    lastSetup.current = { mode: saved.mode, difficulty: saved.difficulty, solverStrategy: saved.solverStrategy };
+    useGameStore.getState().resetGame();
+    setStartError(null);
+    setStartKind('fresh');
+    try {
+      await connectAndResumeGame(saved.solverStrategy);
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : 'Could not continue the game.');
+      setStartKind('idle');
+    }
+  }, [profile.activeGame]);
+
+  const discardSavedGame = useCallback(async () => {
+    try {
+      await discardActiveGame(token);
+      setProfile((current) => ({ ...current, activeGame: null }));
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : 'Could not discard the saved game.');
+    }
+  }, [token]);
 
   useEffect(() => {
     if (startKind === 'idle') {
@@ -116,8 +183,12 @@ export default function App() {
   }, []);
 
   const quit = useCallback(() => {
-    if (window.confirm('Leave this game? Your progress will be lost.')) {
-      void backToDashboard();
+    if (window.confirm('Save and exit? You can continue this game later from the dashboard.')) {
+      void (async () => {
+        await saveAndExit();
+        useGameStore.getState().resetGame();
+        setStartError(null);
+      })();
     }
   }, [backToDashboard]);
 
@@ -136,51 +207,48 @@ export default function App() {
         onStart={(setup) => void startGame(setup, 'fresh')}
         isStarting={startKind === 'fresh'}
         errorMessage={startError ?? storeError}
+        username={username}
+        progress={profile.progress}
+        activeGame={profile.activeGame}
+        onContinue={() => void continueGame()}
+        onDiscardActiveGame={() => void discardSavedGame()}
+        onLogout={() => void signOut()}
       />
     );
   }
 
   return (
-    <main className="relative min-h-screen bg-paper text-ink">
-      <Doodles />
-      <AppHeader>
-        <nav aria-label="Game" className="flex items-center gap-5 sm:gap-7">
-          <span aria-current="page" className={navLinkClass(true)}>
-            Play
-          </span>
-          {gameStatus === 'PLAYING' && (
-            <button type="button" onClick={quit} className={navLinkClass(false)}>
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              Quit
-            </button>
-          )}
-        </nav>
-      </AppHeader>
-      <div className="relative z-10 mx-auto flex max-w-5xl flex-col gap-4 px-3 py-5 sm:px-6 sm:py-6">
+    <main className="min-h-screen bg-slate-900 text-slate-100">
+      <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 p-3 sm:p-6">
+        <ArenaHeader onQuit={quit} />
         {storeError !== null && gameStatus === 'PLAYING' && (
           <div
             role="alert"
-            className="flex w-full items-center justify-between gap-3 rounded-xl border-2 border-red-300 bg-red-50 px-4 py-2 text-red-700"
+            className="flex w-full items-center justify-between gap-3 rounded-xl border border-rose-500/60 bg-rose-500/10 px-4 py-2 text-sm text-rose-200"
           >
             <span>{storeError}</span>
-            <button type="button" onClick={() => void backToDashboard()} className="sketch-btn shrink-0 px-3 py-1 text-sm">
+            <button
+              type="button"
+              onClick={() => void backToDashboard()}
+              className="shrink-0 rounded-lg bg-rose-600 px-3 py-1 font-semibold text-white hover:bg-rose-500"
+            >
               Back to Dashboard
             </button>
           </div>
         )}
-        <GameInfoBar />
-        <div className="flex w-full flex-wrap items-center gap-2.5 empty:hidden">
-          <HealthBar />
-          <BotTimer />
-          <ReshapeTimer />
+        <div className="flex w-full flex-col items-center gap-3 lg:flex-row lg:items-start lg:justify-center">
+          <div className="flex w-full max-w-3xl flex-col items-center gap-3">
+            <div className="grid w-full gap-3 empty:hidden sm:grid-cols-2">
+              <HealthBar />
+              <BotTimer />
+              <ReshapeTimer />
+            </div>
+            <SudokuBoard />
+          </div>
+          <aside className="w-full max-w-3xl lg:w-80 lg:shrink-0">
+            <AlgorithmEvidencePanel />
+          </aside>
         </div>
-        <SudokuBoard
-          aside={
-            <aside aria-label="Algorithm sidebar">
-              <AlgorithmEvidencePanel />
-            </aside>
-          }
-        />
       </div>
       {(gameStatus === 'WON' || gameStatus === 'LOST') && (
         <ConnectedResultModal onPlayAgain={playAgain} onBackToDashboard={() => void backToDashboard()} />
@@ -189,30 +257,40 @@ export default function App() {
   );
 }
 
-const CHIP = 'rounded-full border-2 px-3 py-0.5 text-base';
-
-function GameInfoBar() {
+function ArenaHeader({ onQuit }: { onQuit: () => void }) {
   const mode = useGameStore((state) => state.mode);
   const difficulty = useGameStore((state) => state.difficulty);
   const seed = useGameStore((state) => state.seed);
   const solverStrategy = useGameStore((state) => state.solverStrategy);
+  const gameStatus = useGameStore((state) => state.gameStatus);
   const isDaily = seed !== null && seed.startsWith('daily-');
 
   return (
-    <div className="flex w-full flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`${CHIP} border-ink bg-blush-100`}>{mode === 'BOT_CHALLENGE' ? 'Bot Challenge' : 'Classic'}</span>
-        <span className={`${CHIP} border-ink bg-white`}>
-          {difficulty !== null ? difficulty.charAt(0) + difficulty.slice(1).toLowerCase() : ''}
-        </span>
-        {isDaily && <span className={`${CHIP} border-sunny-500 bg-sunny-100 text-amber-900`}>Daily</span>}
+    <header className="flex w-full items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+        <span className="rounded-md bg-slate-700 px-2 py-1">{mode === 'BOT_CHALLENGE' ? 'Bot Challenge' : 'Classic'}</span>
+        <span className="rounded-md bg-slate-700 px-2 py-1">{difficulty}</span>
+        {isDaily && <span className="rounded-md bg-amber-400/20 px-2 py-1 text-amber-200">Daily</span>}
         {solverStrategy !== null && (
-          <span data-testid="engine-chip" className={`${CHIP} border-lilac-300 bg-lilac-50 text-lilac-600`}>
+          <span data-testid="engine-chip" className="rounded-md bg-emerald-500/15 px-2 py-1 text-emerald-200">
             {solverStrategy === 'NAIVE_ORACLE' ? 'Naive Oracle' : 'Optimized'}
           </span>
         )}
       </div>
       <GameClock />
-    </div>
+      {gameStatus === 'PLAYING' ? (
+        <button
+          type="button"
+          onClick={onQuit}
+          className="flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-slate-600"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Save &amp; Exit
+        </button>
+      ) : (
+        <span className="w-[72px]" aria-hidden="true" />
+      )}
+    </header>
   );
 }
+

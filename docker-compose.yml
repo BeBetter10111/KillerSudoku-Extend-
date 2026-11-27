@@ -1,6 +1,21 @@
 name: killer-sudoku
 
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: killer_sudoku
+      POSTGRES_USER: ${POSTGRES_USER:-killer}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-killer-dev-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-killer} -d killer_sudoku"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
   backend:
     image: maven:3.9-eclipse-temurin-17
     working_dir: /workspace
@@ -10,9 +25,15 @@ services:
       JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
       GAME_RESHAPE_INTERVAL_MS: "${RESHAPE_INTERVAL_MS:-0}"
       SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/killer_sudoku
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-killer}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-killer-dev-password}
     volumes:
       - ./backend:/workspace
       - backend-maven-cache:/root/.m2
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     healthcheck:
@@ -39,5 +60,6 @@ services:
       - "${FRONTEND_PORT:-3000}:5173"
 
 volumes:
+  postgres-data:
   backend-maven-cache:
   frontend-node-modules:

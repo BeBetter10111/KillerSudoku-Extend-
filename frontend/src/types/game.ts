@@ -228,6 +228,29 @@ export interface StartGameRequest {
   seed?: string;
   playerName?: string;
   solverStrategy?: SolverStrategyType;
+  authToken?: string;
+  resume?: boolean;
+}
+
+export type PlayCounts = Record<Difficulty, number>;
+export type Progress = Record<GameMode, PlayCounts>;
+
+export interface ActiveGame {
+  mode: GameMode;
+  difficulty: Difficulty;
+  elapsedMs: number;
+  solverStrategy: SolverStrategyType;
+}
+
+export interface AuthResponse {
+  token: string;
+  username: string;
+}
+
+export interface MeResponse {
+  username: string;
+  progress: Progress;
+  activeGame: ActiveGame | null;
 }
 
 export interface SubmitCellRequest {
