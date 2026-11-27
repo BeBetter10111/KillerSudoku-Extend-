@@ -3,50 +3,30 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    color-scheme: light;
-  }
-
+  html,
   body {
-    @apply bg-paper font-sans text-ink antialiased;
-    letter-spacing: 0.01em;
-  }
-
-  ::selection {
-    @apply bg-lilac-200 text-ink;
+    background-color: #ffffff;
+    color: #432e2a;
+    font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
   }
 }
 
 @layer components {
-  .sketch-card {
-    @apply rounded-2xl border-2 border-ink bg-white shadow-sketch;
+  /* Hand-drawn style button: ink outline + hard offset shadow. */
+  .btn-doodle {
+    @apply rounded-xl border-2 border-ink bg-white font-doodle text-ink shadow-doodle transition-all duration-100 hover:-translate-y-px active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0;
   }
-
-  .sketch-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border-2 border-ink bg-white px-4 py-2 font-bold text-ink shadow-sketch-sm outline-none transition-[transform,box-shadow,background-color] duration-100 hover:bg-blush-50 focus-visible:ring-2 focus-visible:ring-lilac-400 focus-visible:ring-offset-2 focus-visible:ring-offset-paper active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-sketch-sm;
+  .card-doodle {
+    @apply rounded-2xl border-2 border-ink bg-white shadow-doodle;
   }
-
-  .sketch-btn-primary {
-    @apply bg-lilac-300 hover:bg-lilac-200;
+  .pill-doodle {
+    @apply inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-white px-3 py-1 font-doodle text-xs text-ink;
   }
-
-  .sketch-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-white px-3 py-1 text-sm font-bold text-ink;
-  }
-
-  .sketch-option {
-    @apply rounded-xl border-2 border-ink/25 bg-white text-left text-ink outline-none transition-[border-color,background-color,box-shadow] duration-100 hover:border-ink/60 focus-visible:ring-2 focus-visible:ring-lilac-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
-  }
-
-  .sketch-option-selected {
-    @apply border-ink bg-blush-100 shadow-sketch-sm hover:border-ink;
-  }
-
-  .section-label {
-    @apply text-sm font-bold uppercase tracking-[0.18em] text-ink-soft;
-  }
-
-  .wavy-underline {
-    @apply underline decoration-lilac-400 decoration-wavy decoration-2 underline-offset-[10px];
+  .nav-active {
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: #8e6bc4;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
   }
 }

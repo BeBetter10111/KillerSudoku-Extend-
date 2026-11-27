@@ -103,7 +103,7 @@ describe('AlgorithmEvidencePanel', () => {
     startWith();
     render(<AlgorithmEvidencePanel />);
     const panel = screen.getByTestId('algorithm-evidence');
-    expect(panel.className).toContain('border-lilac-500');
+    expect(panel.className).toContain('border-cage-purple');
 
     act(() => {
       vi.advanceTimersByTime(1500);
@@ -111,7 +111,7 @@ describe('AlgorithmEvidencePanel', () => {
     expect(panel.className).toContain('border-ink');
 
     reshape(5);
-    expect(panel.className).toContain('border-lilac-500');
+    expect(panel.className).toContain('border-cage-purple');
   });
 
   it('returns to the waiting state when the game is reset', () => {

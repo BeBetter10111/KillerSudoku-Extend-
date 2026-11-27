@@ -5,16 +5,16 @@ import { useGameStore } from '../../store/useGameStore';
 const HIT_ANIMATION_MS = 600;
 
 const TONES = {
-  emerald: { fill: 'bg-emerald-500', text: 'text-emerald-600' },
-  amber: { fill: 'bg-amber-500', text: 'text-amber-600' },
-  rose: { fill: 'bg-rose-500', text: 'text-red-700' },
+  healthy: { fill: 'bg-crimson', text: 'text-crimson' },
+  warning: { fill: 'bg-[#E0782E]', text: 'text-[#E0782E]' },
+  danger: { fill: 'bg-[#7A1016]', text: 'text-[#7A1016]' },
 } as const;
 
 function toneFor(ratio: number): keyof typeof TONES {
   if (ratio > 0.6) {
-    return 'emerald';
+    return 'healthy';
   }
-  return ratio > 0.3 ? 'amber' : 'rose';
+  return ratio > 0.3 ? 'warning' : 'danger';
 }
 
 export function HealthBar() {
@@ -49,11 +49,11 @@ export function HealthBar() {
       <div
         data-testid="health-bar"
         data-variant="lives"
-        className={`relative flex min-w-[200px] flex-1 items-center gap-3 rounded-full border-2 border-ink bg-white px-4 py-1.5 ${
+        className={`relative flex items-center gap-2 rounded-full px-1 py-1 text-xs ${
           isHit ? 'animate-shake motion-reduce:animate-none' : ''
         }`}
       >
-        <span className="text-lg text-red-700">Lives</span>
+        <span className="text-muted">Lives</span>
         <div
           role="progressbar"
           aria-label="Lives remaining"
@@ -66,21 +66,21 @@ export function HealthBar() {
             <Heart
               key={index}
               data-testid={index < hp ? 'life-full' : 'life-lost'}
-              className={`h-6 w-6 transition-colors duration-300 ${
-                index < hp ? 'fill-red-700 text-ink' : 'fill-transparent text-ink-faint'
+              className={`h-5 w-5 transition-colors duration-300 ${
+                index < hp ? 'fill-crimson text-ink' : 'fill-transparent text-muted/60'
               }`}
-              strokeWidth={1.75}
+              strokeWidth={1.5}
               aria-hidden="true"
             />
           ))}
         </div>
-        <span className="ml-auto font-mono text-sm font-bold tabular-nums text-ink">
+        <span className="sr-only">
           {hp} / {maxHp}
         </span>
         {isHit && (
           <div
             data-testid="health-flash"
-            className="pointer-events-none absolute inset-0 animate-hit-flash rounded-full bg-red-200 motion-reduce:hidden"
+            className="pointer-events-none absolute inset-0 animate-hit-flash rounded-full bg-dusty-rose motion-reduce:hidden"
           />
         )}
       </div>
@@ -94,13 +94,13 @@ export function HealthBar() {
     <div
       data-testid="health-bar"
       data-variant="hp"
-      className={`flex min-w-[220px] flex-1 items-center gap-3 rounded-full border-2 border-ink bg-white px-4 py-1.5 ${
+      className={`flex min-w-[220px] flex-1 items-center gap-2 px-1 py-1 text-xs ${
         isHit ? 'animate-shake motion-reduce:animate-none' : ''
       }`}
     >
-      <span className={`flex items-center gap-1.5 text-lg ${tone.text}`}>
+      <span className={`flex shrink-0 items-center gap-1 ${tone.text}`}>
         <Heart className="h-4 w-4 fill-current" aria-hidden="true" />
-        HP
+        <span className="text-ink">HP</span>
       </span>
       <div
         role="progressbar"
@@ -108,7 +108,7 @@ export function HealthBar() {
         aria-valuemin={0}
         aria-valuemax={maxHp}
         aria-valuenow={hp}
-        className="relative h-4 flex-1 overflow-hidden rounded-full border-2 border-ink bg-blush-50"
+        className="relative h-4 flex-1 overflow-hidden rounded-full border-2 border-ink bg-white p-px"
       >
         <div
           className={`h-full rounded-full transition-[width,background-color] duration-500 ease-out ${tone.fill}`}
@@ -117,11 +117,11 @@ export function HealthBar() {
         {isHit && (
           <div
             data-testid="health-flash"
-            className="absolute inset-0 animate-hit-flash bg-red-200 motion-reduce:hidden"
+            className="absolute inset-0 animate-hit-flash bg-dusty-rose motion-reduce:hidden"
           />
         )}
       </div>
-      <span className="font-mono text-sm font-bold tabular-nums text-ink">
+      <span className="shrink-0 font-mono tabular-nums">
         {hp} / {maxHp}
       </span>
     </div>

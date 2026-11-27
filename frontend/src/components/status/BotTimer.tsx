@@ -5,9 +5,9 @@ import { formatClock } from '../../utils/formatTime';
 
 function fillFor(ratio: number): string {
   if (ratio > 0.5) {
-    return 'bg-fuchsia-400';
+    return 'bg-cage-purple';
   }
-  return ratio > 0.25 ? 'bg-amber-400' : 'bg-rose-500';
+  return ratio > 0.25 ? 'bg-[#E0782E]' : 'bg-crimson';
 }
 
 export function BotTimer() {
@@ -25,11 +25,11 @@ export function BotTimer() {
     return (
       <div
         data-testid="bot-spawn-timer"
-        className="sketch-chip font-normal"
+        className="pill-doodle"
       >
         <Clock3 className="h-4 w-4" aria-hidden="true" />
-        Bot arrives in
-        <span className="font-mono font-bold tabular-nums">{formatClock(spawnRemainingMs)}</span>
+        <span>Bot in:</span>
+        <span className="font-mono tabular-nums">{formatClock(spawnRemainingMs)}</span>
       </div>
     );
   }
@@ -43,24 +43,24 @@ export function BotTimer() {
   return (
     <div
       data-testid="bot-timer"
-      className="sketch-chip min-w-[190px] font-normal"
+      className="pill-doodle min-w-[170px] border-cage-purple bg-lavender/25"
     >
-      <Bot className="h-4 w-4 shrink-0 text-fuchsia-600" aria-hidden="true" />
-      Bot
+      <Bot className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>Bot:</span>
+      <span className="font-mono tabular-nums">{(remainingMs / 1000).toFixed(1)}s</span>
       <div
         role="progressbar"
         aria-label="Bot countdown"
         aria-valuemin={0}
         aria-valuemax={Math.round(botMaxMs / 1000)}
         aria-valuenow={Math.round(remainingMs / 1000)}
-        className="h-2.5 min-w-[48px] flex-1 overflow-hidden rounded-full border border-ink bg-white"
+        className="h-2 flex-1 overflow-hidden rounded-full border border-ink bg-white"
       >
         <div
           className={`h-full rounded-full transition-[width] duration-100 ease-linear ${fillFor(ratio)}`}
           style={{ width: `${ratio * 100}%` }}
         />
       </div>
-      <span className="font-mono font-bold tabular-nums">{(remainingMs / 1000).toFixed(1)}s</span>
     </div>
   );
 }

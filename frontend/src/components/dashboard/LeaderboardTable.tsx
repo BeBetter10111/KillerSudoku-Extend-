@@ -14,7 +14,7 @@ type LoadState =
   | { status: 'error' }
   | { status: 'ready'; entries: LeaderboardEntry[] };
 
-const MEDAL_COLORS = ['text-amber-500', 'text-ink-faint', 'text-orange-500'] as const;
+const MEDAL_COLORS = ['text-[#C9A227]', 'text-muted', 'text-[#B5651D]'] as const;
 
 function completedAt(entry: LeaderboardEntry): string {
   const date = new Date(entry.completedAt);
@@ -43,44 +43,44 @@ export function LeaderboardTable({ mode, difficulty }: LeaderboardTableProps) {
   return (
     <div data-testid="leaderboard">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-2xl text-ink">
-          <Trophy className="h-5 w-5 fill-sunny-300 text-ink" aria-hidden="true" />
+        <h3 className="flex items-center gap-2 font-hand text-2xl text-ink">
+          <Trophy className="h-5 w-5 fill-doodle-yellow text-ink" aria-hidden="true" />
           Daily leaderboard
         </h3>
         <button
           type="button"
           onClick={() => setReloadKey((key) => key + 1)}
           aria-label="Refresh leaderboard"
-          className="rounded-full border-2 border-ink bg-white p-1.5 text-ink shadow-sketch-sm outline-none transition-colors hover:bg-blush-50 focus-visible:ring-2 focus-visible:ring-lilac-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+          className="rounded-full border-2 border-ink p-1.5 text-ink transition-colors hover:bg-pale-blush"
         >
           <RefreshCw className={`h-4 w-4 ${state.status === 'loading' ? 'animate-spin' : ''}`} aria-hidden="true" />
         </button>
       </div>
 
       {state.status === 'loading' && (
-        <p className="flex items-center gap-2 py-6 text-ink-soft">
+        <p className="flex items-center gap-2 py-6 text-sm text-muted">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           Loading leaderboard…
         </p>
       )}
 
       {state.status === 'error' && (
-        <p role="alert" className="py-6 text-red-600">
+        <p role="alert" className="py-6 text-sm text-crimson">
           Could not load the leaderboard. Is the server running?
         </p>
       )}
 
       {state.status === 'ready' && state.entries.length === 0 && (
-        <p className="rounded-xl border-2 border-dashed border-blush-300 bg-blush-50 px-3 py-6 text-center text-ink-soft">No verified runs yet today. Be the first!</p>
+        <p className="py-6 text-sm text-muted">No verified runs yet today. Be the first!</p>
       )}
 
       {state.status === 'ready' && state.entries.length > 0 && (
         <div className="overflow-x-auto rounded-xl border-2 border-ink">
-          <table className="w-full text-left">
+          <table className="w-full text-left text-sm">
             <caption className="sr-only">
               Verified daily seed results for {mode} {difficulty}
             </caption>
-            <thead className="border-b-2 border-ink bg-white text-sm uppercase tracking-wider text-ink-soft">
+            <thead className="border-b-2 border-ink bg-white text-xs text-muted">
               <tr>
                 <th scope="col" className="w-12 py-2 pl-3 pr-2">#</th>
                 <th scope="col" className="py-2 pr-2">Player</th>
@@ -90,7 +90,7 @@ export function LeaderboardTable({ mode, difficulty }: LeaderboardTableProps) {
             </thead>
             <tbody>
               {state.entries.map((entry, index) => (
-                <tr key={`${entry.playerName}-${entry.completedAt}`} className="border-t border-blush-200 first:border-t-0 odd:bg-blush-50 even:bg-white">
+                <tr key={`${entry.playerName}-${entry.completedAt}`} className="border-t border-dusty-rose/60 odd:bg-blush/60">
                   <td className="py-2 pl-3 pr-2 tabular-nums">
                     {index < MEDAL_COLORS.length ? (
                       <span className={`inline-flex items-center gap-1 ${MEDAL_COLORS[index]}`}>
@@ -98,14 +98,14 @@ export function LeaderboardTable({ mode, difficulty }: LeaderboardTableProps) {
                         {index + 1}
                       </span>
                     ) : (
-                      <span className="text-ink-faint">{index + 1}</span>
+                      <span className="text-muted">{index + 1}</span>
                     )}
                   </td>
-                  <td className="max-w-[10rem] truncate py-2 pr-2 text-lg text-ink">{entry.playerName}</td>
-                  <td className="py-2 pr-2 text-right font-mono text-sm font-bold tabular-nums text-ink">
+                  <td className="max-w-[10rem] truncate py-2 pr-2 text-ink">{entry.playerName}</td>
+                  <td className="py-2 pr-2 text-right font-mono tabular-nums text-ink">
                     {formatPrecise(entry.finalTimeMs)}
                   </td>
-                  <td className="py-2 pr-3 text-right font-mono text-sm tabular-nums text-ink-soft">{completedAt(entry)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums text-muted">{completedAt(entry)}</td>
                 </tr>
               ))}
             </tbody>

@@ -25,11 +25,11 @@ export const CageOverlay = memo(function CageOverlay() {
             key={shape.id}
             d={shape.path}
             strokeLinecap="round"
-            strokeDasharray="6 6"
-            strokeWidth={isAlertActive ? 4 : 2.5}
+            strokeDasharray="5 6"
+            strokeWidth={isAlertActive ? 3.5 : 2.2}
             data-alert={isAlertActive}
             className={
-              isAlertActive ? 'animate-cage-alert stroke-amber-500 motion-reduce:animate-none' : 'stroke-lilac-400'
+              isAlertActive ? 'animate-cage-alert stroke-crimson motion-reduce:animate-none' : 'stroke-cage-purple/70'
             }
           />
         ))}
@@ -40,8 +40,8 @@ export const CageOverlay = memo(function CageOverlay() {
           data-testid="cage-sum"
           data-row={shape.label.row}
           data-col={shape.label.col}
-          className={`absolute p-[0.9%] font-mono text-[8px] font-bold leading-none sm:text-[10px] ${
-            isAlertActive ? 'text-amber-700' : 'text-ink-soft'
+          className={`absolute p-[0.9%] text-[9px] font-mono leading-none sm:text-[10px] ${
+            isAlertActive ? 'text-crimson' : 'text-ink'
           }`}
           style={{
             left: `${(shape.label.col / GRID_SIZE) * 100}%`,

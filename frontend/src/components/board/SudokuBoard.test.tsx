@@ -243,7 +243,7 @@ describe('SudokuBoard', () => {
       emit({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 4, correct: false } });
     };
 
-    it('shows a wrong number in red and a correct one in lilac', () => {
+    it('shows a wrong number in red and a correct one in blue', () => {
       startGame({ cells: gridWith({ '2,2': 7 }) });
       render(<SudokuBoard />);
       emit({ type: 'MOVE_REJECTED', payload: { position: { row: 1, col: 1 }, value: 4, correct: false } });
@@ -251,10 +251,10 @@ describe('SudokuBoard', () => {
       const wrong = cellAt(1, 1);
       expect(wrong.getAttribute('data-wrong')).toBe('true');
       expect(wrong.getAttribute('aria-label')).toContain('wrong');
-      expect(wrong.querySelector('span span')?.className).toContain('text-red-600');
+      expect(wrong.querySelector('span span')?.className).toContain('text-crimson');
       const correct = cellAt(2, 2);
       expect(correct.getAttribute('data-wrong')).toBe('false');
-      expect(correct.querySelector('span span')?.className).toContain('text-lilac-600');
+      expect(correct.querySelector('span span')?.className).toContain('text-cage-purple');
       expect(cellAt(0, 0).querySelector('span span')?.className).toContain('text-ink');
     });
 

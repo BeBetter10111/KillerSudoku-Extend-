@@ -23,7 +23,7 @@ describe('HealthBar', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  it('shows hp, width and an emerald -> amber -> rose color shift', () => {
+  it('shows hp, width and a crimson -> orange -> dark red color shift', () => {
     startGame();
     render(<HealthBar />);
     const bar = screen.getByRole('progressbar', { name: 'Player health' });
@@ -31,15 +31,15 @@ describe('HealthBar', () => {
 
     expect(screen.getByText('100 / 100')).toBeTruthy();
     expect(fill.style.width).toBe('100%');
-    expect(fill.className).toContain('bg-emerald-500');
+    expect(fill.className).toContain('bg-crimson');
 
     emit({ type: 'HP_CHANGED', payload: { maxHp: 100, currentHp: 50 } });
     expect(fill.style.width).toBe('50%');
-    expect(fill.className).toContain('bg-amber-500');
+    expect(fill.className).toContain('bg-[#E0782E]');
     expect(bar.getAttribute('aria-valuenow')).toBe('50');
 
     emit({ type: 'HP_CHANGED', payload: { maxHp: 100, currentHp: 20 } });
-    expect(fill.className).toContain('bg-rose-500');
+    expect(fill.className).toContain('bg-[#7A1016]');
     expect(fill.className).toContain('transition-[width,background-color]');
   });
 

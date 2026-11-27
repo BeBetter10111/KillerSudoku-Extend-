@@ -22,18 +22,15 @@ export interface CellProps {
 
 const NOTE_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
-const HIGHLIGHT_BACKGROUND: Record<CellHighlight, { given: string; open: string }> = {
-  selected: {
-    given: 'bg-lilac-100 ring-2 ring-inset ring-lilac-500',
-    open: 'bg-lilac-100 ring-2 ring-inset ring-lilac-500',
-  },
-  same: { given: 'bg-lilac-200', open: 'bg-lilac-200' },
-  peer: { given: 'bg-blush-200', open: 'bg-lilac-50' },
-  none: { given: 'bg-blush-100', open: 'bg-white' },
+const HIGHLIGHT_BACKGROUND: Record<CellHighlight, string> = {
+  selected: 'bg-white ring-2 ring-inset ring-cage-purple',
+  same: 'bg-lavender/50',
+  peer: 'bg-pale-blush',
+  none: 'bg-white',
 };
 
 function borderClasses(row: number, col: number): string {
-  const classes = ['border-ink/15'];
+  const classes = ['border-[#E4DDE6]'];
   if (col < 8) {
     classes.push(col % 3 === 2 ? 'border-r-2 border-r-ink' : 'border-r');
   }
@@ -52,7 +49,7 @@ function BotBadge() {
   return (
     <span
       data-testid="bot-badge"
-      className="absolute bottom-0.5 right-0.5 rounded bg-fuchsia-600 px-1 text-[8px] font-bold leading-tight tabular-nums text-white sm:text-[10px]"
+      className="absolute bottom-0.5 right-0.5 rounded bg-cage-purple px-1 text-[8px] font-bold leading-tight tabular-nums text-white sm:text-[10px]"
     >
       {Math.ceil(remainingMs / 1000)}s
     </span>
@@ -82,7 +79,11 @@ export const Cell = memo(function Cell({
 
   const isError = errorSignal !== null;
   const background =
-    isError && highlight !== 'selected' ? 'bg-red-200' : HIGHLIGHT_BACKGROUND[highlight][given ? 'given' : 'open'];
+    isError && highlight !== 'selected'
+      ? 'bg-dusty-rose'
+      : highlight === 'none' && value !== 0
+        ? 'bg-blush'
+        : HIGHLIGHT_BACKGROUND[highlight];
   const description = [
     `Row ${row + 1}, column ${col + 1}`,
     value !== 0 ? String(value) : 'empty',
@@ -105,7 +106,7 @@ export const Cell = memo(function Cell({
       data-wrong={wrong}
       data-bot={isBot}
       onClick={() => onSelect(row, col)}
-      className={`relative aspect-square min-w-0 select-none outline-none transition-colors duration-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lilac-500 ${background} ${borderClasses(row, col)}`}
+      className={`relative aspect-square min-w-0 select-none outline-none transition-colors duration-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cage-purple ${background} ${borderClasses(row, col)}`}
     >
       <span
         key={shakeKey}
@@ -115,15 +116,15 @@ export const Cell = memo(function Cell({
       >
         {value !== 0 && (
           <span
-            className={`text-2xl leading-none sm:text-4xl ${
-              given ? 'text-ink' : wrong ? 'text-red-600' : 'text-lilac-600'
+            className={`font-hand text-2xl leading-none sm:text-4xl ${
+              given ? 'text-ink' : wrong ? 'text-crimson' : 'text-cage-purple'
             }`}
           >
             {value}
           </span>
         )}
         {value === 0 && notes !== undefined && notes.length > 0 && (
-          <span className="absolute inset-x-1 bottom-0.5 top-2.5 grid grid-cols-3 grid-rows-3 place-items-center font-mono text-[7px] leading-none sm:text-[10px]">
+          <span className="absolute inset-x-1 bottom-0.5 top-2.5 grid grid-cols-3 grid-rows-3 place-items-center text-[7px] leading-none sm:text-[10px]">
             {NOTE_DIGITS.map((digit) => (
               <span
                 key={digit}
@@ -131,8 +132,8 @@ export const Cell = memo(function Cell({
                   !notes.includes(digit)
                     ? 'invisible'
                     : digit === highlightValue
-                      ? 'font-bold text-lilac-600'
-                      : 'text-ink-soft'
+                      ? 'font-bold text-cage-purple'
+                      : 'text-muted'
                 }
               >
                 {digit}
@@ -144,10 +145,10 @@ export const Cell = memo(function Cell({
           <>
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0.5 rounded-md ring-2 ring-fuchsia-500 animate-bot-glow motion-reduce:animate-none"
+              className="pointer-events-none absolute inset-0.5 rounded-md ring-2 ring-cage-purple animate-bot-glow motion-reduce:animate-none"
             />
             <Bot
-              className="absolute right-0.5 top-0.5 h-3 w-3 text-fuchsia-600 sm:h-4 sm:w-4"
+              className="absolute right-0.5 top-0.5 h-3 w-3 text-cage-purple sm:h-4 sm:w-4"
               aria-hidden="true"
             />
             <BotBadge />

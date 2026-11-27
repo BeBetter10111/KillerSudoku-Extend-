@@ -15,11 +15,11 @@ export function ReshapeTimer() {
       data-testid="reshape-timer"
       role="timer"
       aria-label="Time until the cage layout reshapes"
-      className="sketch-chip font-normal"
+      className="pill-doodle"
     >
       <Shuffle className="h-4 w-4" aria-hidden="true" />
-      Reshape:
-      <span data-testid="reshape-timer-value" className="font-mono font-bold tabular-nums">
+      <span>Reshape:</span>
+      <span data-testid="reshape-timer-value" className="font-mono tabular-nums">
         {formatClock(Math.ceil(remainingMs / 1000) * 1000)}
       </span>
     </div>

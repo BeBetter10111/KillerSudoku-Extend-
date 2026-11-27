@@ -110,28 +110,30 @@ function Numpad() {
   }, [grid]);
 
   return (
-    <div className="flex flex-col gap-2.5" data-testid="numpad">
-      <div className="grid grid-cols-9 gap-1.5 sm:gap-2 lg:grid-cols-3 lg:gap-2.5">
+    <div className="flex flex-col gap-2" data-testid="numpad">
+      <div className="grid grid-cols-9 gap-1.5 sm:grid-cols-3 sm:gap-2.5">
         {DIGITS.map((digit) => (
           <button
             key={digit}
             type="button"
             disabled={placedCounts[digit] >= GRID_SIZE}
             onClick={() => enterDigit(digit)}
-            className={`sketch-btn aspect-[3/4] px-0 py-0 text-2xl font-normal disabled:opacity-30 sm:text-3xl lg:aspect-auto lg:h-14 ${
-              notesMode ? 'bg-sunny-100 hover:bg-sunny-300' : ''
+            className={`btn-doodle aspect-[3/4] font-hand text-xl sm:aspect-[2/1] sm:text-3xl ${
+              notesMode ? 'bg-doodle-yellow/70 text-muted' : 'hover:bg-pale-blush'
             }`}
           >
             {digit}
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="mt-1 grid grid-cols-2 gap-2.5">
         <button
           type="button"
           aria-pressed={notesMode}
           onClick={toggleNotesMode}
-          className={`sketch-btn px-3 py-2 font-normal ${notesMode ? 'bg-sunny-300 hover:bg-sunny-300' : ''}`}
+          className={`btn-doodle flex items-center justify-center gap-2 px-3 py-2 text-xs ${
+            notesMode ? 'bg-doodle-yellow' : ''
+          }`}
         >
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Notes {notesMode ? 'ON' : 'OFF'}
@@ -139,7 +141,7 @@ function Numpad() {
         <button
           type="button"
           onClick={clearNotes}
-          className="sketch-btn px-3 py-2 font-normal"
+          className="btn-doodle flex items-center justify-center gap-2 px-3 py-2 text-xs"
         >
           <Eraser className="h-4 w-4" aria-hidden="true" />
           Erase notes
@@ -149,13 +151,7 @@ function Numpad() {
   );
 }
 
-interface SudokuBoardProps {
-  className?: string;
-  /** Extra content shown under the number pad (e.g. the algorithm panel). */
-  aside?: ReactNode;
-}
-
-export function SudokuBoard({ className = '', aside }: SudokuBoardProps) {
+export function SudokuBoard({ className = '', sidebar }: { className?: string; sidebar?: ReactNode }) {
   const grid = useGameStore((state) => state.grid);
   const selectedCell = useGameStore((state) => state.selectedCell);
   const notes = useGameStore((state) => state.notes);
@@ -182,7 +178,7 @@ export function SudokuBoard({ className = '', aside }: SudokuBoardProps) {
       <div
         role="group"
         aria-label="Killer Sudoku board"
-        className="relative aspect-square w-full max-w-[560px] touch-manipulation overflow-hidden rounded-2xl border-[3px] border-ink bg-white shadow-sketch-lg"
+        className="relative aspect-square w-full max-w-[560px] touch-manipulation overflow-hidden rounded-2xl border-[3px] border-ink bg-white shadow-doodle"
       >
         <div className="grid h-full w-full grid-cols-9 grid-rows-9">
           {grid.map((line) =>
@@ -212,7 +208,7 @@ export function SudokuBoard({ className = '', aside }: SudokuBoardProps) {
       </div>
       <div className="flex w-full max-w-[560px] flex-col gap-5 lg:w-80 lg:shrink-0">
         <Numpad />
-        {aside}
+        {sidebar}
       </div>
     </div>
   );
