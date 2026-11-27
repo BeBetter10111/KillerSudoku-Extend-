@@ -20,6 +20,7 @@ FROM eclipse-temurin:17-jre
 RUN groupadd --system sudoku && useradd --system --gid sudoku --no-create-home sudoku
 WORKDIR /app
 COPY --from=build /build/target/killer-sudoku-backend-*.jar /app/app.jar
+RUN mkdir -p /app/data && chown sudoku:sudoku /app/data
 USER sudoku
 ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70"
 EXPOSE 8080
